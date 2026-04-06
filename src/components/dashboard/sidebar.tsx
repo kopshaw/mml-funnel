@@ -9,6 +9,7 @@ import {
   DollarSign,
   LayoutDashboard,
   MessageSquare,
+  Rocket,
   Settings,
   Users,
   Zap,
@@ -18,6 +19,7 @@ import { ClientSwitcher } from "@/components/dashboard/client-switcher";
 
 const navItems = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
+  { label: "Campaigns", href: "/campaigns", icon: Rocket },
   { label: "Traffic & Ads", href: "/traffic", icon: BarChart3 },
   { label: "Pipeline", href: "/pipeline", icon: Users },
   { label: "Revenue", href: "/revenue", icon: DollarSign },

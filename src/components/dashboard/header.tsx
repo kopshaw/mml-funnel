@@ -14,6 +14,8 @@ const pageTitles: Record<string, string> = {
   "/healing": "Self-Healing Activity",
   "/alerts": "Alerts",
   "/settings": "Settings",
+  "/campaigns": "Campaigns",
+  "/campaigns/new": "New Campaign",
 };
 
 export function Header() {
