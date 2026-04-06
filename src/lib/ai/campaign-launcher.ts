@@ -1,5 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { GeneratedCampaignContent } from "@/lib/ai/campaign-architect";
+import { enrollContact } from "@/lib/automation/journey-manager";
+import { createMetaCampaign } from "@/lib/automation/meta-ads-creator";
+
+// Re-export enrollContact so form-submission handlers can import from here
+// without needing to know about the automation layer directly.
+export { enrollContact };
 
 // ---------------------------------------------------------------------------
 // Main Launch Function
@@ -210,6 +216,18 @@ export async function launchCampaign(briefId: string): Promise<string> {
 
     if (adsError) {
       throw new Error(`Failed to create ad creatives: ${adsError.message}`);
+    }
+
+    // ── 7b. Create Meta ad campaign (non-blocking) ────────────────────────
+    // Don't fail the launch if Meta campaign creation fails — the ads can
+    // be created later manually or via retry.
+    try {
+      await createMetaCampaign(briefId);
+    } catch (metaErr) {
+      console.warn(
+        `[campaign-launcher] Meta campaign creation failed (non-fatal):`,
+        metaErr instanceof Error ? metaErr.message : String(metaErr)
+      );
     }
 
     // ── 8. Update brief — mark as launched ─────────────────────────────────

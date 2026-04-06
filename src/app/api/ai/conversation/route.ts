@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { initiateContact, handleInboundMessage } from "@/lib/ai/sales-agent";
+import { enrollContact } from "@/lib/automation/journey-manager";
 
 /**
  * API route for AI conversation handling.
@@ -57,6 +58,17 @@ export async function POST(request: NextRequest) {
         funnel_id: funnelId,
         event_type: "page_conversion",
         event_data: { variant_id: variantId, ...utmParams },
+      });
+
+      // Enroll the contact in email/SMS sequences for this funnel.
+      // This is the critical connection: form submission -> contact created ->
+      // journey enrolled -> sequences start firing automatically.
+      // Run async so it doesn't block the form response.
+      enrollContact(contact.id, funnelId).catch((err) => {
+        console.error(
+          `[conversation] Failed to enroll contact ${contact.id} in journey:`,
+          err instanceof Error ? err.message : String(err)
+        );
       });
 
       // Initiate AI outreach (async — don't block the form submission)
