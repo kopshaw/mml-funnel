@@ -75,10 +75,10 @@ export default function HealingPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">
-          Self-Healing Activity
+          SOFIA Optimization
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Automated diagnostics and corrective actions across your funnels.
+          SOFIA continuously monitors and optimizes your funnel performance.
         </p>
       </div>
 

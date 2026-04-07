@@ -25,7 +25,7 @@ const navItems = [
   { label: "Revenue", href: "/revenue", icon: DollarSign },
   { label: "Conversations", href: "/conversations", icon: MessageSquare },
   { label: "Funnels", href: "/funnels", icon: Activity },
-  { label: "Self-Healing", href: "/healing", icon: Zap },
+  { label: "Optimization", href: "/healing", icon: Zap },
   { label: "Alerts", href: "/alerts", icon: Bell, badge: 3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
@@ -51,7 +51,7 @@ export function Sidebar() {
           <Zap className="h-4 w-4 text-white" />
         </div>
         <span className="text-lg font-semibold tracking-tight text-slate-100">
-          MML Funnel
+          SOFIA
         </span>
       </div>
 
@@ -92,7 +92,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-800 px-4 py-3">
-        <p className="text-xs text-slate-500">Metric Mentor Labs</p>
+        <p className="text-xs text-slate-500">SOFIA by Metric Mentor Labs</p>
       </div>
     </aside>
   );

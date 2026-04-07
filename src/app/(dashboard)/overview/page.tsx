@@ -68,7 +68,7 @@ const kpiCards = [
 
 const recentActivity = [
   {
-    action: "Self-healing triggered",
+    action: "SOFIA optimization triggered",
     detail: "VSL High-Ticket Closer - CTA button color changed",
     time: "12 min ago",
     type: "healing" as const,
@@ -117,7 +117,7 @@ export default function OverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-100">Overview</h2>
+        <h2 className="text-2xl font-bold text-slate-100">SOFIA Overview</h2>
         <p className="mt-1 text-sm text-slate-400">
           High-level performance across all funnels and campaigns.
         </p>

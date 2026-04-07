@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Self-Healing Funnel | Autonomous Marketing That Optimizes Itself",
+  title: "SOFIA | Self-Optimizing Funnel Intelligence & Automation",
   description: "Build a complete marketing funnel in minutes. AI creates your landing pages, emails, SMS sequences, and ad copy — then monitors and optimizes everything automatically.",
 };
 
@@ -18,7 +18,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="w-6 h-6 text-blue-500" />
-            <span className="text-lg font-bold">Self-Healing Funnel</span>
+            <span className="text-lg font-bold">SOFIA</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
@@ -39,8 +39,9 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-sm text-blue-400 mb-8">
             <Zap className="w-4 h-4" />
-            Powered by AI that never sleeps
+            SOFIA — Self-Optimizing Funnel Intelligence
           </div>
+          <p className="text-lg font-semibold text-blue-400 mb-4">Meet SOFIA</p>
           <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
             Your Entire Funnel.
             <br />
@@ -222,12 +223,12 @@ export default function HomePage() {
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <span className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-bold">3</span>
-                  <h3 className="text-2xl font-bold">Launch & Self-Heal</h3>
+                  <h3 className="text-2xl font-bold">Launch & SOFIA Optimizes</h3>
                 </div>
                 <p className="text-slate-400 mb-6 leading-relaxed">
                   One click deploys everything. Your landing page goes live, email sequences activate,
                   SMS starts firing, Meta ads launch, and the AI sales agent starts qualifying leads.
-                  Then the self-healing engine takes over.
+                  Then SOFIA's optimization engine takes over.
                 </p>
                 <ul className="space-y-3">
                   {[
@@ -248,7 +249,7 @@ export default function HomePage() {
               <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-sm text-green-400 font-medium">Self-Healing Active</span>
+                  <span className="text-sm text-green-400 font-medium">SOFIA Active</span>
                 </div>
                 <div className="space-y-3">
                   {[
@@ -291,13 +292,13 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: Rocket, title: "AI Campaign Builder", desc: "Fill out a brief, AI generates your complete funnel — landing page, emails, SMS, ad copy, and sales agent — in under 60 seconds." },
-              { icon: Target, title: "Dynamic Landing Pages", desc: "Server-side A/B tested pages that auto-optimize. The self-healing engine swaps headlines, CTAs, and layouts based on performance." },
+              { icon: Target, title: "Dynamic Landing Pages", desc: "Server-side A/B tested pages that auto-optimize. SOFIA's optimization engine swaps headlines, CTAs, and layouts based on performance." },
               { icon: Mail, title: "Email Sequences", desc: "Automated nurture sequences built from proven frameworks. AI writes the copy, the system sends on schedule, tracks every open and click." },
               { icon: MessageSquare, title: "SMS Follow-Up", desc: "Conversational text sequences that feel personal. Automated timing, reply handling, and opt-out management via Twilio." },
               { icon: Bot, title: "AI Sales Agent", desc: "Claude-powered lead qualification via text and email. Handles objections, books calls, and pushes qualified leads to your CRM." },
               { icon: BarChart3, title: "Full Analytics Dashboard", desc: "Real-time visibility into every metric: traffic, spend, conversions, revenue, ROAS, pipeline stages, AI conversation stats." },
-              { icon: RefreshCw, title: "Self-Healing Engine", desc: "Monitors every funnel stage every 30 minutes. Detects drops, diagnoses root causes, and fixes issues automatically." },
-              { icon: Brain, title: "AI Diagnostics", desc: "When something breaks, Claude analyzes the data, identifies the likely cause, and recommends or executes the right fix." },
+              { icon: RefreshCw, title: "SOFIA Optimization Engine", desc: "Monitors every funnel stage every 30 minutes. Detects drops, diagnoses root causes, and fixes issues automatically." },
+              { icon: Brain, title: "SOFIA Intelligence", desc: "When something breaks, SOFIA analyzes the data, identifies the likely cause, and recommends or executes the right fix." },
               { icon: Shield, title: "Safety Guards", desc: "Max 3 auto-actions per day. Single-variable testing. Auto-revert if a change hurts performance. Escalation after 3 failures." },
               { icon: TrendingUp, title: "Revenue Attribution", desc: "Track every dollar from ad click to closed deal. Know exactly which campaigns, funnels, and AI actions drive revenue." },
               { icon: DollarSign, title: "Meta Ads Integration", desc: "AI creates your campaigns, monitors performance, adjusts budgets, and launches new creative variants — all automatically." },
@@ -339,7 +340,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto">
           <div className="rounded-2xl border border-blue-500/30 bg-gradient-to-b from-blue-500/10 to-transparent p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Build Your First Self-Healing Funnel?
+              Ready to Meet SOFIA?
             </h2>
             <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto">
               Stop paying $10K+ per funnel. Stop losing money to unmonitored campaigns.
@@ -363,7 +364,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-blue-500" />
-            <span className="font-semibold">Self-Healing Funnel</span>
+            <span className="font-semibold">SOFIA</span>
             <span className="text-slate-600 text-sm ml-2">by Metric Mentor Labs</span>
           </div>
           <p className="text-sm text-slate-600">

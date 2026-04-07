@@ -5,13 +5,13 @@ import { Bell, User, ChevronRight } from "lucide-react";
 import { useClient } from "@/lib/client-context";
 
 const pageTitles: Record<string, string> = {
-  "/overview": "Overview",
+  "/overview": "SOFIA Overview",
   "/traffic": "Traffic & Ads",
   "/pipeline": "Pipeline",
   "/revenue": "Revenue",
   "/conversations": "Conversations",
   "/funnels": "Funnel Overview",
-  "/healing": "Self-Healing Activity",
+  "/healing": "SOFIA Optimization",
   "/alerts": "Alerts",
   "/settings": "Settings",
   "/campaigns": "Campaigns",
@@ -22,7 +22,7 @@ export function Header() {
   const pathname = usePathname();
   const { clientSlug, clients } = useClient();
 
-  const title = pageTitles[pathname] ?? "MML Funnel Command Center";
+  const title = pageTitles[pathname] ?? "SOFIA";
 
   const activeClient = clients.find((c) => c.slug === clientSlug);
 

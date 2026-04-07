@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MML Funnel Command Center",
+  title: "SOFIA | Self-Optimizing Funnel Intelligence & Automation",
   description:
-    "Self-healing funnel management and revenue optimization by Metric Mentor Labs",
+    "AI-powered funnel management and revenue optimization by Metric Mentor Labs",
 };
 
 export default function RootLayout({
