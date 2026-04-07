@@ -13,21 +13,38 @@ export async function GET() {
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Fetch auth user details via admin API
-  const { data: authData } = await supabase.auth.admin.listUsers();
-  const authUsers = authData?.users ?? [];
+  // Collect unique user_ids and fetch auth details individually
+  // (listUsers fails due to GoTrue schema bug with legacy NULL columns)
+  const uniqueUserIds = [
+    ...new Set((clientUsers ?? []).map((cu) => cu.user_id)),
+  ];
 
-  // Build a map of user_id -> auth info
-  const authMap = new Map(
-    authUsers.map((u) => [
-      u.id,
-      {
-        email: u.email,
-        full_name: u.user_metadata?.full_name,
-        last_sign_in_at: u.last_sign_in_at,
-        created_at: u.created_at,
-      },
-    ])
+  const authMap = new Map<
+    string,
+    {
+      email: string | undefined;
+      full_name: string | undefined;
+      last_sign_in_at: string | undefined;
+      created_at: string | undefined;
+    }
+  >();
+
+  await Promise.all(
+    uniqueUserIds.map(async (uid) => {
+      try {
+        const { data } = await supabase.auth.admin.getUserById(uid);
+        if (data?.user) {
+          authMap.set(uid, {
+            email: data.user.email,
+            full_name: data.user.user_metadata?.full_name,
+            last_sign_in_at: data.user.last_sign_in_at,
+            created_at: data.user.created_at,
+          });
+        }
+      } catch {
+        // Skip users with broken auth records
+      }
+    })
   );
 
   // Group client_users by user_id
@@ -92,29 +109,61 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  // Check if user already exists in auth
-  const { data: authData } = await supabase.auth.admin.listUsers();
-  const existingUser = authData?.users?.find((u) => u.email === email);
+  let userId: string | null = null;
 
-  let userId: string;
+  // Try to create user via signup (avoids broken listUsers API)
+  const signupRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password: password || "temp-" + crypto.randomUUID().slice(0, 12),
+      options: {
+        data: { full_name: full_name || email.split("@")[0] },
+      },
+    }),
+  });
 
-  if (existingUser) {
-    userId = existingUser.id;
+  const signupData = await signupRes.json();
+
+  if (signupRes.ok && signupData.id) {
+    // New user created via signup — confirm email via admin API
+    userId = signupData.id;
+    await supabase.auth.admin.updateUserById(userId!, {
+      email_confirm: true,
+    });
   } else {
-    // Create new auth user
-    const { data: newUser, error: authError } =
-      await supabase.auth.admin.createUser({
-        email,
-        password: password || undefined,
-        email_confirm: true,
-        user_metadata: { full_name: full_name || email.split("@")[0] },
-      });
+    // User may already exist — check client_users for a matching user_id
+    // by trying to load each known user and matching email
+    const { data: allCu } = await supabase
+      .from("client_users")
+      .select("user_id");
+    const uids = [...new Set((allCu ?? []).map((c) => c.user_id))];
 
-    if (authError)
-      return NextResponse.json({ error: authError.message }, { status: 500 });
+    for (const uid of uids) {
+      try {
+        const { data } = await supabase.auth.admin.getUserById(uid);
+        if (data?.user?.email === email) {
+          userId = uid;
+          break;
+        }
+      } catch {
+        // Skip broken users
+      }
+    }
 
-    userId = newUser.user.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Could not create or find user. The email may belong to a broken auth record." },
+        { status: 500 }
+      );
+    }
   }
 
   // Check if user already assigned to this client
