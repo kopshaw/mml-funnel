@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SOFIA | Self-Optimizing Funnel Intelligence & Automation",
+  title: "SOPHIA | Self-Optimizing Predictive Hub & Intelligent Automation",
   description:
     "AI-powered funnel management and revenue optimization by Metric Mentor Labs",
 };

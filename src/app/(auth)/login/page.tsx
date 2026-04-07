@@ -42,7 +42,7 @@ export default function LoginPage() {
           <Zap className="h-6 w-6 text-white" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-100">
-          SOFIA
+          SOPHIA
         </h1>
         <p className="text-sm text-slate-400">
           Sign in to your dashboard
@@ -105,7 +105,7 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-8 text-center text-xs text-slate-600">
-        SOFIA by Metric Mentor Labs
+        SOPHIA by Metric Mentor Labs
       </p>
     </div>
   );

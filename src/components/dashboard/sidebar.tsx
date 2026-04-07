@@ -51,7 +51,7 @@ export function Sidebar() {
           <Zap className="h-4 w-4 text-white" />
         </div>
         <span className="text-lg font-semibold tracking-tight text-slate-100">
-          SOFIA
+          SOPHIA
         </span>
       </div>
 
@@ -92,7 +92,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-800 px-4 py-3">
-        <p className="text-xs text-slate-500">SOFIA by Metric Mentor Labs</p>
+        <p className="text-xs text-slate-500">SOPHIA by Metric Mentor Labs</p>
       </div>
     </aside>
   );

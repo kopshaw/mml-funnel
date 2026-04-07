@@ -6,13 +6,13 @@ import { useClient } from "@/lib/client-context";
 import { createClient } from "@/lib/supabase/client";
 
 const pageTitles: Record<string, string> = {
-  "/overview": "SOFIA Overview",
+  "/overview": "SOPHIA Overview",
   "/traffic": "Traffic & Ads",
   "/pipeline": "Pipeline",
   "/revenue": "Revenue",
   "/conversations": "Conversations",
   "/funnels": "Funnel Overview",
-  "/healing": "SOFIA Optimization",
+  "/healing": "SOPHIA Optimization",
   "/alerts": "Alerts",
   "/settings": "Settings",
   "/campaigns": "Campaigns",
@@ -24,7 +24,7 @@ export function Header() {
   const router = useRouter();
   const { clientSlug, clients } = useClient();
 
-  const title = pageTitles[pathname] ?? "SOFIA";
+  const title = pageTitles[pathname] ?? "SOPHIA";
 
   const activeClient = clients.find((c) => c.slug === clientSlug);
 

@@ -45,10 +45,10 @@ export default async function HealingPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">
-          SOFIA Optimization
+          SOPHIA Optimization
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          SOFIA continuously monitors and optimizes your funnel performance.
+          SOPHIA continuously monitors and optimizes your funnel performance.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ export default async function HealingPage() {
       {actions.length === 0 ? (
         <EmptyState
           title="No optimization actions yet"
-          description="SOFIA will display optimization actions here as it monitors your funnel performance."
+          description="SOPHIA will display optimization actions here as it monitors your funnel performance."
           icon={Inbox}
         />
       ) : (
