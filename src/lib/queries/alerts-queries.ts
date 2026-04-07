@@ -14,7 +14,7 @@ export async function getAlerts(
   let query = supabase
     .from("alerts")
     .select(
-      "id, funnel_id, alert_type, severity, title, message, is_read, is_resolved, resolved_at, created_at"
+      "id, funnel_id, optimization_action_id, severity, title, message, acknowledged, acknowledged_at, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -77,7 +77,7 @@ export async function getAlertCounts(clientId?: string) {
   let query = supabase
     .from("alerts")
     .select("severity, funnel_id")
-    .eq("is_resolved", false);
+    .eq("acknowledged", false);
 
   if (clientId) {
     const { data: clientFunnels } = await supabase

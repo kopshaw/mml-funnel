@@ -9,7 +9,7 @@ export async function getFunnels(clientId?: string) {
 
   let query = supabase
     .from("funnels")
-    .select("id, name, slug, status, health, industry, offer_type, client_id, created_at, updated_at")
+    .select("id, name, landing_page_slug, status, offer_type, offer_price_cents, client_id, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (clientId) {
@@ -42,10 +42,9 @@ export async function getFunnels(clientId?: string) {
   return funnels.map((f: any) => ({
     id: f.id,
     name: f.name,
-    slug: f.slug,
+    slug: f.landing_page_slug,
     status: f.status ?? "draft",
-    health: f.health ?? "healthy",
-    offer_type: f.offer_type ?? f.industry ?? "General",
+    offer_type: f.offer_type ?? "low_ticket",
     stages: stageCounts[f.id] ?? 0,
     client_id: f.client_id,
     created_at: f.created_at,
@@ -75,7 +74,7 @@ export async function getFunnelDetail(id: string) {
     .from("funnel_stages")
     .select("*")
     .eq("funnel_id", id)
-    .order("position", { ascending: true });
+    .order("stage_order", { ascending: true });
 
   // Fetch baselines for all stages of this funnel
   const stageIds = (stages ?? []).map((s: any) => s.id);
@@ -85,7 +84,7 @@ export async function getFunnelDetail(id: string) {
     const { data: baselineData } = await supabase
       .from("stage_baselines")
       .select("*")
-      .in("stage_id", stageIds);
+      .in("funnel_stage_id", stageIds);
 
     baselines = baselineData ?? [];
   }

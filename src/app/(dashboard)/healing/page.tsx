@@ -63,7 +63,7 @@ export default async function HealingPage() {
         <div className="space-y-3">
           {actions.map((action: any) => {
             const status = action.status ?? "suggested";
-            const priority = action.priority ?? "low";
+            const priority = action.risk_tier ?? "low";
             const actionTypeLabel = (action.action_type ?? "")
               .replace(/_/g, " ")
               .replace(/\b\w/g, (c: string) => c.toUpperCase());
@@ -77,7 +77,7 @@ export default async function HealingPage() {
                   <div className="flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-foreground">
-                        {action.title || actionTypeLabel}
+                        {actionTypeLabel}
                       </span>
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status] ?? "bg-muted text-muted-foreground"}`}
@@ -91,7 +91,7 @@ export default async function HealingPage() {
                       </span>
                     </div>
                     <p className="text-sm leading-relaxed text-muted-foreground">
-                      {action.description || action.ai_reasoning || ""}
+                      {action.diagnosis || ""}
                     </p>
                     {action.funnel_name && (
                       <p className="text-xs text-muted-foreground">

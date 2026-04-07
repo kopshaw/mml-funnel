@@ -11,7 +11,7 @@ export async function getOptimizationActions(clientId?: string, limit = 50) {
   let query = supabase
     .from("optimization_actions")
     .select(
-      "id, funnel_id, action_type, title, description, status, priority, ai_reasoning, created_at, deployed_at, completed_at"
+      "id, funnel_id, funnel_stage_id, action_type, diagnosis, action_details, status, risk_tier, impact_verdict, created_at, executed_at, review_at"
     )
     .order("created_at", { ascending: false })
     .limit(limit);

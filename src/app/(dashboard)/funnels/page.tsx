@@ -82,7 +82,7 @@ export default async function FunnelsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {funnels.map((funnel: any) => {
-            const health = funnel.health ?? "healthy";
+            const health = funnel.status === "active" ? "healthy" : funnel.status === "paused" ? "warning" : "healthy";
             const status = funnel.status ?? "draft";
             const statusKey =
               status.charAt(0).toUpperCase() + status.slice(1);
