@@ -163,3 +163,25 @@ export async function getQualificationFunnel(clientId?: string) {
     count: counts[stage] ?? 0,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Conversation messages (JSONB field on conversations table)
+// ---------------------------------------------------------------------------
+
+export async function getConversationMessages(conversationId: string) {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("messages")
+    .eq("id", conversationId)
+    .single();
+
+  if (error) {
+    console.error("getConversationMessages error:", error.message);
+    return [];
+  }
+
+  // messages is a JSONB array on the conversations table
+  return (data?.messages as any[]) ?? [];
+}

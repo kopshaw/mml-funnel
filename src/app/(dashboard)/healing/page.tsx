@@ -1,76 +1,46 @@
-const healingActions = [
-  {
-    id: "h-001",
-    timestamp: "2026-04-06 09:42 AM",
-    actionType: "Email Resend",
-    diagnosis:
-      "Detected 3 unopened follow-up emails in VSL funnel stage 4. Triggered re-send with alternate subject line.",
-    status: "completed" as const,
-    riskTier: "low" as const,
-  },
-  {
-    id: "h-002",
-    timestamp: "2026-04-06 09:15 AM",
-    actionType: "Page Swap",
-    diagnosis:
-      "Landing page bounce rate exceeded 65% threshold. Swapped to variant B with shorter headline.",
-    status: "completed" as const,
-    riskTier: "medium" as const,
-  },
-  {
-    id: "h-003",
-    timestamp: "2026-04-06 08:30 AM",
-    actionType: "Offer Adjustment",
-    diagnosis:
-      "Cart abandonment rate spiked to 42%. Considering price anchor adjustment for Retainer Upsell.",
-    status: "pending_review" as const,
-    riskTier: "high" as const,
-  },
-  {
-    id: "h-004",
-    timestamp: "2026-04-05 11:20 PM",
-    actionType: "Sequence Delay",
-    diagnosis:
-      "Engagement score dropped below threshold in Free Audit sequence. Inserted 24hr cooling period before next touch.",
-    status: "completed" as const,
-    riskTier: "low" as const,
-  },
-  {
-    id: "h-005",
-    timestamp: "2026-04-05 06:45 PM",
-    actionType: "SMS Fallback",
-    diagnosis:
-      "Email delivery rate below 80% for segment. Activated SMS fallback for undelivered contacts.",
-    status: "in_progress" as const,
-    riskTier: "medium" as const,
-  },
-];
+import { Inbox } from "lucide-react";
+import { getOptimizationActions } from "@/lib/queries/healing-queries";
+import { EmptyState } from "@/components/dashboard/empty-state";
 
-const statusStyles = {
+const statusStyles: Record<string, string> = {
   completed: "bg-healthy/10 text-healthy",
+  deployed: "bg-healthy/10 text-healthy",
+  monitoring: "bg-primary/10 text-primary",
   in_progress: "bg-primary/10 text-primary",
-  pending_review: "bg-warning/10 text-warning",
+  suggested: "bg-warning/10 text-warning",
+  approved: "bg-warning/10 text-warning",
+  rejected: "bg-critical/10 text-critical",
+  rolled_back: "bg-critical/10 text-critical",
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   completed: "Completed",
+  deployed: "Deployed",
+  monitoring: "Monitoring",
   in_progress: "In Progress",
-  pending_review: "Needs Review",
+  suggested: "Suggested",
+  approved: "Approved",
+  rejected: "Rejected",
+  rolled_back: "Rolled Back",
 };
 
-const riskStyles = {
+const priorityStyles: Record<string, string> = {
   low: "border-healthy/30 text-healthy",
   medium: "border-warning/30 text-warning",
   high: "border-critical/30 text-critical",
+  critical: "border-critical/30 text-critical",
 };
 
-const riskLabels = {
+const priorityLabels: Record<string, string> = {
   low: "Low Risk",
   medium: "Med Risk",
   high: "High Risk",
+  critical: "Critical",
 };
 
-export default function HealingPage() {
+export default async function HealingPage() {
+  const actions = await getOptimizationActions();
+
   return (
     <div className="space-y-6">
       <div>
@@ -83,40 +53,63 @@ export default function HealingPage() {
       </div>
 
       {/* Activity feed */}
-      <div className="space-y-3">
-        {healingActions.map((action) => (
-          <div
-            key={action.id}
-            className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/20"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    {action.actionType}
-                  </span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[action.status]}`}
-                  >
-                    {statusLabels[action.status]}
-                  </span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs font-medium ${riskStyles[action.riskTier]}`}
-                  >
-                    {riskLabels[action.riskTier]}
+      {actions.length === 0 ? (
+        <EmptyState
+          title="No optimization actions yet"
+          description="SOFIA will display optimization actions here as it monitors your funnel performance."
+          icon={Inbox}
+        />
+      ) : (
+        <div className="space-y-3">
+          {actions.map((action: any) => {
+            const status = action.status ?? "suggested";
+            const priority = action.priority ?? "low";
+            const actionTypeLabel = (action.action_type ?? "")
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+            return (
+              <div
+                key={action.id}
+                className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/20"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">
+                        {action.title || actionTypeLabel}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status] ?? "bg-muted text-muted-foreground"}`}
+                      >
+                        {statusLabels[status] ?? status}
+                      </span>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-medium ${priorityStyles[priority] ?? "border-slate-500 text-slate-400"}`}
+                      >
+                        {priorityLabels[priority] ?? priority}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {action.description || action.ai_reasoning || ""}
+                    </p>
+                    {action.funnel_name && (
+                      <p className="text-xs text-muted-foreground">
+                        Funnel: {action.funnel_name}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {action.created_at
+                      ? new Date(action.created_at).toLocaleDateString()
+                      : ""}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {action.diagnosis}
-                </p>
               </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {action.timestamp}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

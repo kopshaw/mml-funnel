@@ -7,103 +7,10 @@ import {
   Target,
   ArrowUpRight,
   ArrowDownRight,
+  Inbox,
 } from "lucide-react";
-
-const kpiCards = [
-  {
-    label: "Total Revenue",
-    value: "$184,320",
-    change: "+12.5%",
-    trend: "up" as const,
-    icon: DollarSign,
-    color: "text-emerald-400",
-    bgColor: "bg-emerald-400/10",
-  },
-  {
-    label: "Ad Spend",
-    value: "$23,450",
-    change: "+8.2%",
-    trend: "up" as const,
-    icon: BarChart3,
-    color: "text-blue-400",
-    bgColor: "bg-blue-400/10",
-  },
-  {
-    label: "ROAS",
-    value: "7.86x",
-    change: "+3.1%",
-    trend: "up" as const,
-    icon: TrendingUp,
-    color: "text-violet-400",
-    bgColor: "bg-violet-400/10",
-  },
-  {
-    label: "Total Leads",
-    value: "1,247",
-    change: "-2.4%",
-    trend: "down" as const,
-    icon: Users,
-    color: "text-amber-400",
-    bgColor: "bg-amber-400/10",
-  },
-  {
-    label: "Conversion Rate",
-    value: "4.8%",
-    change: "+0.6%",
-    trend: "up" as const,
-    icon: Target,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-400/10",
-  },
-  {
-    label: "Active Funnels",
-    value: "12",
-    change: "+2",
-    trend: "up" as const,
-    icon: Activity,
-    color: "text-pink-400",
-    bgColor: "bg-pink-400/10",
-  },
-];
-
-const recentActivity = [
-  {
-    action: "SOFIA optimization triggered",
-    detail: "VSL High-Ticket Closer - CTA button color changed",
-    time: "12 min ago",
-    type: "healing" as const,
-  },
-  {
-    action: "New lead captured",
-    detail: "john.smith@example.com via Free Audit funnel",
-    time: "28 min ago",
-    type: "lead" as const,
-  },
-  {
-    action: "Revenue milestone",
-    detail: "Webinar Ops Accelerator crossed $50K MRR",
-    time: "1 hr ago",
-    type: "revenue" as const,
-  },
-  {
-    action: "Alert resolved",
-    detail: "Facebook Ads API reconnected successfully",
-    time: "2 hr ago",
-    type: "alert" as const,
-  },
-  {
-    action: "Funnel published",
-    detail: "Retainer Upsell Sequence moved to Active",
-    time: "3 hr ago",
-    type: "funnel" as const,
-  },
-  {
-    action: "Conversation closed",
-    detail: "Deal won: $12,500 from Discovery Call Booking",
-    time: "4 hr ago",
-    type: "revenue" as const,
-  },
-];
+import { getOverviewKPIs, getRecentActivity } from "@/lib/queries/overview-queries";
+import { EmptyState } from "@/components/dashboard/empty-state";
 
 const activityTypeColors: Record<string, string> = {
   healing: "bg-violet-500",
@@ -111,9 +18,65 @@ const activityTypeColors: Record<string, string> = {
   revenue: "bg-emerald-500",
   alert: "bg-amber-500",
   funnel: "bg-cyan-500",
+  action: "bg-violet-500",
 };
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const kpis = await getOverviewKPIs();
+  const recentActivity = await getRecentActivity(undefined, 10);
+
+  const totalRevenueDollars = kpis.totalRevenue / 100;
+  const adSpendDollars = kpis.adSpend / 100;
+  const roas = adSpendDollars > 0 ? (totalRevenueDollars / adSpendDollars).toFixed(2) : "0.00";
+  const conversionRate = kpis.totalLeads > 0
+    ? ((kpis.conversions / kpis.totalLeads) * 100).toFixed(1)
+    : "0.0";
+
+  const kpiCards = [
+    {
+      label: "Total Revenue",
+      value: `$${totalRevenueDollars.toLocaleString()}`,
+      icon: DollarSign,
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-400/10",
+    },
+    {
+      label: "Ad Spend",
+      value: `$${adSpendDollars.toLocaleString()}`,
+      icon: BarChart3,
+      color: "text-blue-400",
+      bgColor: "bg-blue-400/10",
+    },
+    {
+      label: "ROAS",
+      value: `${roas}x`,
+      icon: TrendingUp,
+      color: "text-violet-400",
+      bgColor: "bg-violet-400/10",
+    },
+    {
+      label: "Total Leads",
+      value: kpis.totalLeads.toLocaleString(),
+      icon: Users,
+      color: "text-amber-400",
+      bgColor: "bg-amber-400/10",
+    },
+    {
+      label: "Conversion Rate",
+      value: `${conversionRate}%`,
+      icon: Target,
+      color: "text-cyan-400",
+      bgColor: "bg-cyan-400/10",
+    },
+    {
+      label: "Active Funnels",
+      value: kpis.activeFunnels.toString(),
+      icon: Activity,
+      color: "text-pink-400",
+      bgColor: "bg-pink-400/10",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -145,27 +108,12 @@ export default function OverviewPage() {
               <p className="mt-2 text-3xl font-bold text-slate-100">
                 {kpi.value}
               </p>
-              <div className="mt-1 flex items-center gap-1">
-                {kpi.trend === "up" ? (
-                  <ArrowUpRight className="h-4 w-4 text-emerald-400" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-red-400" />
-                )}
-                <span
-                  className={`text-sm font-medium ${
-                    kpi.trend === "up" ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {kpi.change}
-                </span>
-                <span className="text-sm text-slate-500">vs last month</span>
-              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Two-column section: chart placeholder + activity feed */}
+      {/* Two-column section: chart placeholder + pipeline placeholder */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Revenue Trend Chart Placeholder */}
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
@@ -209,27 +157,44 @@ export default function OverviewPage() {
           Latest events across all funnels
         </p>
 
-        <div className="mt-4 divide-y divide-slate-800">
-          {recentActivity.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-            >
-              <span
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${activityTypeColors[item.type]}`}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-200">
-                  {item.action}
-                </p>
-                <p className="truncate text-sm text-slate-400">{item.detail}</p>
+        {recentActivity.length === 0 ? (
+          <EmptyState
+            title="No recent activity"
+            description="Activity from optimizations and alerts will appear here as your funnels run."
+            icon={Inbox}
+            className="mt-4 border-0 bg-transparent py-8"
+          />
+        ) : (
+          <div className="mt-4 divide-y divide-slate-800">
+            {recentActivity.map((item: any, idx: number) => (
+              <div
+                key={item.id ?? idx}
+                className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <span
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${activityTypeColors[item._type] ?? "bg-slate-500"}`}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-200">
+                    {item._type === "action"
+                      ? item.action_type?.replace(/_/g, " ") ?? "Optimization"
+                      : item.title ?? "Alert"}
+                  </p>
+                  <p className="truncate text-sm text-slate-400">
+                    {item._type === "action"
+                      ? item.diagnosis ?? item.description ?? ""
+                      : item.message ?? ""}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs text-slate-500">
+                  {item.created_at
+                    ? new Date(item.created_at).toLocaleDateString()
+                    : ""}
+                </span>
               </div>
-              <span className="shrink-0 text-xs text-slate-500">
-                {item.time}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export interface Client {
   id: string;
@@ -42,8 +43,7 @@ export function ClientProvider({
   const searchParams = useSearchParams();
   const [clients] = useState<Client[]>(initialClients);
   const [isLoading, setIsLoading] = useState(true);
-
-  const isAdmin = initialRole === "admin";
+  const [isAdmin, setIsAdmin] = useState(initialRole === "admin");
 
   // Read client slug from URL search param
   const clientSlugFromUrl = searchParams.get("client");
@@ -54,8 +54,31 @@ export function ClientProvider({
   const clientSlug = activeClient?.slug ?? null;
 
   useEffect(() => {
-    // Simulate initial load completing
-    setIsLoading(false);
+    async function checkAuthRole() {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check client_users table for admin role
+      const { data: roles } = await supabase
+        .from("client_users")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const hasAdminRole = roles?.some((r: { role: string }) => r.role === "admin") ?? false;
+      setIsAdmin(hasAdminRole);
+      setIsLoading(false);
+    }
+
+    checkAuthRole();
   }, []);
 
   const setClient = useCallback(

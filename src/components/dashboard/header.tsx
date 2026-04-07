@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Bell, User, ChevronRight } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, User, ChevronRight, LogOut } from "lucide-react";
 import { useClient } from "@/lib/client-context";
+import { createClient } from "@/lib/supabase/client";
 
 const pageTitles: Record<string, string> = {
   "/overview": "SOFIA Overview",
@@ -20,11 +21,19 @@ const pageTitles: Record<string, string> = {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { clientSlug, clients } = useClient();
 
   const title = pageTitles[pathname] ?? "SOFIA";
 
   const activeClient = clients.find((c) => c.slug === clientSlug);
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-6 backdrop-blur-sm">
@@ -56,6 +65,16 @@ export function Header() {
           className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600/20 text-blue-400 transition-colors hover:bg-blue-600/30"
         >
           <User className="h-4 w-4" />
+        </button>
+
+        {/* Logout */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          title="Sign out"
+          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+        >
+          <LogOut className="h-4 w-4" />
         </button>
       </div>
     </header>
