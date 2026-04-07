@@ -25,12 +25,20 @@ export default function HomePage() {
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
-          <Link
-            href="/campaigns/new"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Get Started
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
+            >
+              Login
+            </Link>
+            <Link
+              href="/campaigns/new"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Get Started
+            </Link>
+          </div>
         </div>
       </nav>
 

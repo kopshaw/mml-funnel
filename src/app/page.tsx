@@ -11,6 +11,6 @@ export default async function Home() {
   if (user) {
     redirect("/overview");
   } else {
-    redirect("/login");
+    redirect("/home");
   }
 }
