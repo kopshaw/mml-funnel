@@ -8,6 +8,7 @@ import {
   Bell,
   DollarSign,
   LayoutDashboard,
+  Map,
   MessageSquare,
   Rocket,
   Settings,
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Funnels", href: "/funnels", icon: Activity },
   { label: "Optimization", href: "/healing", icon: Zap },
   { label: "Alerts", href: "/alerts", icon: Bell, badge: 3 },
+  { label: "Roadmap", href: "/roadmap", icon: Map },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
