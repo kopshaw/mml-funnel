@@ -414,6 +414,47 @@ async function chatOpenAI(
 }
 
 // ---------------------------------------------------------------------------
+// JSON fence stripping
+// ---------------------------------------------------------------------------
+
+function stripJsonFences(content: string): string {
+  let s = content.trim();
+  // Remove leading ```json or ``` and trailing ```
+  if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json|JSON)?\s*\n?/, "");
+  }
+  if (s.endsWith("```")) {
+    s = s.replace(/\n?\s*```\s*$/, "");
+  }
+  // Some models add prose before/after the JSON object — extract the {…}
+  // by finding the first { and matching brace depth. Only do this if a
+  // simple parse fails on the cleaned string.
+  try {
+    JSON.parse(s);
+    return s;
+  } catch {
+    const start = s.indexOf("{");
+    if (start === -1) return s;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = start; i < s.length; i++) {
+      const ch = s[i];
+      if (escape) { escape = false; continue; }
+      if (ch === "\\") { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) return s.slice(start, i + 1);
+      }
+    }
+    return s; // give up; let parse fail and report
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API: routed chat call
 // ---------------------------------------------------------------------------
 
@@ -442,13 +483,16 @@ export async function routedChat(
       break;
   }
 
-  // Validate JSON if requested
+  // Validate JSON if requested. Strip ```json fences first since some
+  // models (Haiku, GPT-4o-mini) wrap JSON despite being told not to.
   if (options.json) {
+    const cleaned = stripJsonFences(result.content);
     try {
-      JSON.parse(result.content);
+      JSON.parse(cleaned);
+      result.content = cleaned;
     } catch {
       throw new Error(
-        `${spec.model} returned invalid JSON. Response start: ${result.content.slice(0, 200)}`
+        `${spec.model} returned invalid JSON. Response start: ${cleaned.slice(0, 200)}`
       );
     }
   }
