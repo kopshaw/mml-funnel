@@ -5,6 +5,7 @@ import { LandingPageContent } from "@/components/landing/page-content";
 import { AnalyticsTracker } from "@/components/landing/analytics-tracker";
 import { VariantPersister } from "@/components/landing/variant-persister";
 import { PreviewBanner } from "@/components/landing/preview-banner";
+import { LongFormLayout } from "@/components/landing/long-form-layout";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -123,7 +124,14 @@ export default async function LandingPage({ params, searchParams }: Props) {
     | Record<string, string>
     | null;
 
-  return (
+  // Pull out brand + audience context for image queries (best-effort)
+  const variantContent = (rawContent ?? {}) as {
+    variant?: string;
+    page?: { hero?: { headline?: string; subheadline?: string } } & Record<string, unknown>;
+  };
+  const isLongForm = variantContent.variant === "long" && !!variantContent.page;
+
+  const preamble = (
     <>
       <AnalyticsTracker
         funnelId={funnel.id}
@@ -140,6 +148,31 @@ export default async function LandingPage({ params, searchParams }: Props) {
           slug={slug}
         />
       )}
+    </>
+  );
+
+  // Long-form is rendered by the async server component (prefetches images)
+  if (isLongForm) {
+    const longFormPage = variantContent.page as unknown as Parameters<typeof LongFormLayout>[0]["page"];
+    return (
+      <>
+        {preamble}
+        <LongFormLayout
+          page={longFormPage}
+          funnel={funnel}
+          variantId={assignedVariant?.id}
+          variantLabel={assignedVariant?.variant_label}
+          utmParams={utmParams}
+          brandName={funnel.name}
+        />
+      </>
+    );
+  }
+
+  // Short-form + legacy go through the client component
+  return (
+    <>
+      {preamble}
       <LandingPageContent
         funnel={funnel}
         content={rawContent}
