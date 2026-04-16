@@ -176,10 +176,10 @@ export default async function CampaignsPage() {
               key={campaign.id}
               className="group relative rounded-xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-900/80"
             >
-              {/* Clickable overlay that goes to the review page.
+              {/* Clickable overlay that goes to the command center.
                   Stays underneath the View Live Funnel link via z-index. */}
               <Link
-                href={`/campaigns/${campaign.id}/review`}
+                href={`/campaigns/${campaign.id}`}
                 aria-label={`Open ${campaign.offer_name}`}
                 className="absolute inset-0 z-0 rounded-xl"
               />
