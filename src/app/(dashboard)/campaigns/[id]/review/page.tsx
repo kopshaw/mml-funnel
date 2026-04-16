@@ -45,7 +45,8 @@ interface AdCreative {
 interface AgentPrompt {
   system_prompt?: string;
   qualification_criteria?: string;
-  objection_responses?: string;
+  objection_responses?: string | Record<string, string>;
+  booking_signals?: string[];
 }
 
 interface FunnelStage {
@@ -520,7 +521,34 @@ export default function CampaignReviewPage() {
           {agent.objection_responses && (
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
               <h3 className="text-sm font-semibold text-white mb-3">Objection Responses</h3>
-              <p className="text-sm text-slate-300 whitespace-pre-wrap">{agent.objection_responses}</p>
+              {typeof agent.objection_responses === "string" ? (
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{agent.objection_responses}</p>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(agent.objection_responses).map(([category, response]) => (
+                    <div key={category} className="bg-slate-950 rounded-lg p-4 border border-slate-800">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-2">
+                        {category.replace(/_/g, " ")}
+                      </p>
+                      <p className="text-sm text-slate-300 whitespace-pre-wrap">{response}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {agent.booking_signals && agent.booking_signals.length > 0 && (
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
+              <h3 className="text-sm font-semibold text-white mb-3">Booking Signals</h3>
+              <p className="text-xs text-slate-500 mb-3">Cues from the conversation that mean a lead is ready to book</p>
+              <ul className="space-y-2">
+                {agent.booking_signals.map((signal, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                    <span className="mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>{signal}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {!agent.system_prompt && !agent.qualification_criteria && !agent.objection_responses && (
