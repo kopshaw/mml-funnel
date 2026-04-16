@@ -198,11 +198,21 @@ export async function runResearchAgent(
   // — the model invokes them and the results come back inline in the same
   // response. SDK type definitions don't yet include them so we cast.
   // `max_uses` caps the agent's exploration to control cost.
-  // Supported tool versions per Anthropic API: web_search_20260209,
-  // web_fetch_20260309. (web_fetch_20250305 was never published.)
+  // `allowed_callers: ["direct"]` is required for models like Sonnet 4 that
+  // don't natively support programmatic tool calling.
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 8 },
-    { type: "web_fetch_20260309", name: "web_fetch", max_uses: 6 },
+    {
+      type: "web_search_20260209",
+      name: "web_search",
+      max_uses: 8,
+      allowed_callers: ["direct"],
+    },
+    {
+      type: "web_fetch_20260309",
+      name: "web_fetch",
+      max_uses: 6,
+      allowed_callers: ["direct"],
+    },
   ] as unknown as Anthropic.Tool[];
 
   let totalInputTokens = 0;
