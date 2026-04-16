@@ -44,7 +44,7 @@ interface AdCreative {
 
 interface AgentPrompt {
   system_prompt?: string;
-  qualification_criteria?: string;
+  qualification_criteria?: string | Record<string, string>;
   objection_responses?: string | Record<string, string>;
   booking_signals?: string[];
 }
@@ -508,14 +508,29 @@ export default function CampaignReviewPage() {
                 <Bot className="w-4 h-4 text-blue-400" /> System Prompt
               </h3>
               <pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans bg-slate-950 rounded-lg p-4 border border-slate-800">
-                {agent.system_prompt}
+                {typeof agent.system_prompt === "string" ? agent.system_prompt : JSON.stringify(agent.system_prompt, null, 2)}
               </pre>
             </div>
           )}
           {agent.qualification_criteria && (
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
               <h3 className="text-sm font-semibold text-white mb-3">Qualification Criteria</h3>
-              <p className="text-sm text-slate-300 whitespace-pre-wrap">{agent.qualification_criteria}</p>
+              {typeof agent.qualification_criteria === "string" ? (
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{agent.qualification_criteria}</p>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(agent.qualification_criteria).map(([key, value]) => (
+                    <div key={key} className="bg-slate-950 rounded-lg p-4 border border-slate-800">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-2">
+                        {key.replace(/_/g, " ")}
+                      </p>
+                      <p className="text-sm text-slate-300 whitespace-pre-wrap">
+                        {typeof value === "string" ? value : JSON.stringify(value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {agent.objection_responses && (
