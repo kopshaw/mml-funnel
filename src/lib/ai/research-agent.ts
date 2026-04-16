@@ -225,15 +225,20 @@ export async function runResearchAgent(
     },
   ];
 
-  // Server-tool agentic loop. For server tools, Anthropic returns
-  // server_tool_use + the tool result inline in the same response, so
-  // most cases finish in 1 call. But the model may continue invoking
-  // more searches across multiple turns. We loop until we get a stop
-  // reason of "end_turn" with no more tool invocations.
+  // Two-phase approach:
+  //
+  //   Phase 1 (research): let the model use web_search/web_fetch as much
+  //     as it wants. The model narrates its findings as text.
+  //   Phase 2 (synthesis): once Phase 1 ends with no more tool calls,
+  //     send a fresh user message asking for the JSON dossier only.
+  //
+  // We loop on Phase 1 because the model may go through several rounds
+  // of tool use before settling. Phase 2 is always a single follow-up.
   let finalContent = "";
-  const MAX_TURNS = 5;
+  const MAX_RESEARCH_TURNS = 6;
+  let researchDone = false;
 
-  for (let turn = 0; turn < MAX_TURNS; turn++) {
+  for (let turn = 0; turn < MAX_RESEARCH_TURNS && !researchDone; turn++) {
     const response = await client.messages.create({
       model: RESEARCH_MODEL,
       max_tokens: 8192,
@@ -245,52 +250,68 @@ export async function runResearchAgent(
     totalInputTokens += response.usage.input_tokens;
     totalOutputTokens += response.usage.output_tokens;
 
-    // Count server-side tool invocations for telemetry. Block types
-    // include `server_tool_use` (the call) and `web_search_tool_result`
-    // / `web_fetch_tool_result` (the result), all returned by Anthropic.
+    // Count server-side tool invocations for telemetry
+    let usedToolsThisTurn = 0;
     for (const block of response.content) {
       const t = (block as { type?: string }).type;
-      if (t === "server_tool_use" || t === "tool_use") toolCallCount++;
+      if (t === "server_tool_use" || t === "tool_use") {
+        toolCallCount++;
+        usedToolsThisTurn++;
+      }
     }
 
-    // Add response to conversation
     messages.push({ role: "assistant", content: response.content });
 
-    // If the model is done invoking tools and has produced a final text,
-    // grab it. Server tools self-resolve so stop_reason will be "end_turn"
-    // when the model has nothing more to say/search.
-    if (response.stop_reason === "end_turn") {
-      const textBlocks = response.content.filter(
-        (b): b is Anthropic.TextBlock => b.type === "text"
+    // If the model used tools this turn, the response has the results
+    // baked in — it might want another turn to use more tools. Continue
+    // the loop without prompting.
+    if (response.stop_reason === "tool_use" || usedToolsThisTurn > 0) {
+      // Handle any client-side tool stubs (shouldn't happen with server tools)
+      const clientToolUses = response.content.filter(
+        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
       );
-      finalContent = textBlocks.map((b) => b.text).join("");
-      break;
+      if (clientToolUses.length > 0) {
+        const toolResults: Anthropic.ToolResultBlockParam[] = clientToolUses.map((tu) => ({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: "[no client tools available]",
+        }));
+        messages.push({ role: "user", content: toolResults });
+      }
+      // Otherwise the server tool results are already in the assistant
+      // message, just continue the loop to let the model think more.
+      continue;
     }
 
-    // If model invoked client-side tools (shouldn't happen, but defensively)
-    // we'd handle them here. For now just continue with empty stubs.
-    const clientToolUses = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
-    );
-    if (clientToolUses.length > 0) {
-      const toolResults: Anthropic.ToolResultBlockParam[] = clientToolUses.map((tu) => ({
-        type: "tool_result",
-        tool_use_id: tu.id,
-        content: "[no client tools available]",
-      }));
-      messages.push({ role: "user", content: toolResults });
-    } else {
-      // No tool calls and not end_turn — just nudge for the JSON
-      messages.push({
-        role: "user",
-        content:
-          "Now produce the final JSON Research Dossier matching the schema. Just the JSON, no commentary.",
-      });
-    }
+    // Model ended its turn without using tools — research phase is done.
+    researchDone = true;
   }
 
+  // Phase 2: ask for the final JSON dossier
+  messages.push({
+    role: "user",
+    content:
+      "Excellent. Now synthesize all of your research into the final Research Dossier. Output ONLY the JSON object matching the schema in the system prompt — no preamble, no markdown fences, no commentary. Start with `{` and end with `}`.",
+  });
+
+  const finalResponse = await client.messages.create({
+    model: RESEARCH_MODEL,
+    max_tokens: 8192,
+    system: systemPrompt,
+    // No tools on the final call — pure synthesis
+    messages,
+  });
+
+  totalInputTokens += finalResponse.usage.input_tokens;
+  totalOutputTokens += finalResponse.usage.output_tokens;
+
+  const textBlocks = finalResponse.content.filter(
+    (b): b is Anthropic.TextBlock => b.type === "text"
+  );
+  finalContent = textBlocks.map((b) => b.text).join("");
+
   if (!finalContent) {
-    throw new Error(`Research agent didn't produce final response after ${MAX_TURNS} turns`);
+    throw new Error(`Research agent didn't produce a final JSON synthesis`);
   }
 
   // Strip any markdown fences and parse JSON
