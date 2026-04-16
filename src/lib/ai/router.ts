@@ -461,6 +461,10 @@ function stripJsonFences(content: string): string {
 /**
  * Chat with the model best suited for this task. Logs usage and cost
  * automatically when a clientId is provided.
+ *
+ * If JSON mode fails to parse, automatically retries once with a stricter
+ * system prompt. This rescues high-volume parallel calls where one out of
+ * many sections sometimes returns malformed JSON.
  */
 export async function routedChat(
   task: TaskType,
@@ -470,18 +474,19 @@ export async function routedChat(
 ): Promise<ChatResult> {
   const spec = await selectModel(task, options.modelOverride);
 
-  let result: ChatResult;
-  switch (spec.provider) {
-    case "anthropic":
-      result = await chatAnthropic(spec, systemPrompt, messages, options);
-      break;
-    case "openai":
-      result = await chatOpenAI(spec, systemPrompt, messages, options, getOpenAI());
-      break;
-    case "deepseek":
-      result = await chatOpenAI(spec, systemPrompt, messages, options, getDeepSeek());
-      break;
+  async function callOnce(systemPromptOverride?: string): Promise<ChatResult> {
+    const sysPrompt = systemPromptOverride ?? systemPrompt;
+    switch (spec.provider) {
+      case "anthropic":
+        return chatAnthropic(spec, sysPrompt, messages, options);
+      case "openai":
+        return chatOpenAI(spec, sysPrompt, messages, options, getOpenAI());
+      case "deepseek":
+        return chatOpenAI(spec, sysPrompt, messages, options, getDeepSeek());
+    }
   }
+
+  let result = await callOnce();
 
   // Validate JSON if requested. Strip ```json fences first since some
   // models (Haiku, GPT-4o-mini) wrap JSON despite being told not to.
@@ -490,10 +495,34 @@ export async function routedChat(
     try {
       JSON.parse(cleaned);
       result.content = cleaned;
-    } catch {
-      throw new Error(
-        `${spec.model} returned invalid JSON. Response start: ${cleaned.slice(0, 200)}`
-      );
+    } catch (err) {
+      // Retry once with a stricter prompt that emphasizes JSON quoting
+      const stricterPrompt = `${systemPrompt}
+
+CRITICAL JSON FORMATTING RULES:
+- Output ONLY a JSON object — no preamble, no markdown fences, no commentary.
+- All string values must be valid JSON: escape every double-quote as \\"
+- Escape every backslash as \\\\ and every newline as \\n
+- Apostrophes (') do NOT need escaping in JSON strings
+- Test mentally: would JSON.parse() accept your output? If not, fix it.`;
+
+      try {
+        const retry = await callOnce(stricterPrompt);
+        const retryCleaned = stripJsonFences(retry.content);
+        JSON.parse(retryCleaned);
+        retry.content = retryCleaned;
+        result = {
+          ...retry,
+          inputTokens: result.inputTokens + retry.inputTokens,
+          outputTokens: result.outputTokens + retry.outputTokens,
+          costCents: result.costCents + retry.costCents,
+        };
+      } catch (retryErr) {
+        await logUsage(spec, result, options);
+        throw new Error(
+          `${spec.model} returned invalid JSON twice. First error: ${err instanceof Error ? err.message : String(err)}. Last response start: ${(retryErr instanceof Error ? cleaned : cleaned).slice(0, 200)}`
+        );
+      }
     }
   }
 
