@@ -172,13 +172,20 @@ export default async function CampaignsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {campaigns.map((campaign) => (
-            <Link
+            <div
               key={campaign.id}
-              href={`/campaigns/${campaign.id}/review`}
-              className="group rounded-xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-900/80"
+              className="group relative rounded-xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-900/80"
             >
+              {/* Clickable overlay that goes to the review page.
+                  Stays underneath the View Live Funnel link via z-index. */}
+              <Link
+                href={`/campaigns/${campaign.id}/review`}
+                aria-label={`Open ${campaign.offer_name}`}
+                className="absolute inset-0 z-0 rounded-xl"
+              />
+
               {/* Top row: name + status */}
-              <div className="flex items-start justify-between gap-3">
+              <div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
                     <Rocket className="h-5 w-5 text-blue-400" />
@@ -194,7 +201,7 @@ export default async function CampaignsPage() {
               </div>
 
               {/* Details */}
-              <div className="mt-4 space-y-2.5">
+              <div className="relative z-10 mt-4 space-y-2.5 pointer-events-none">
                 <div className="flex items-center gap-2 text-sm">
                   <Tag className="h-3.5 w-3.5 text-slate-500" />
                   <span className="text-slate-400">
@@ -219,27 +226,26 @@ export default async function CampaignsPage() {
               </div>
 
               {/* Footer */}
-              <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
+              <div className="relative z-10 mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
                 {campaign.status === "launched" && campaign.funnel?.landing_page_slug ? (
                   <a
                     href={`/${campaign.funnel.landing_page_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300"
                   >
                     View Live Funnel
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
-                  <span />
+                  <span className="pointer-events-none" />
                 )}
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="pointer-events-none inline-flex items-center gap-1 text-xs font-medium text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
                   View Campaign
                   <ArrowRight className="h-3 w-3" />
                 </span>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
