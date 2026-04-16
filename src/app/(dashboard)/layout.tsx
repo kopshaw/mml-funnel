@@ -4,6 +4,12 @@ import { Header } from "@/components/dashboard/header";
 import { ClientProvider, type Client } from "@/lib/client-context";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// All dashboard pages must render on each request — they query live DB state
+// and would otherwise be statically generated at build time (returning empty
+// data forever).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getClients(): Promise<Client[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
