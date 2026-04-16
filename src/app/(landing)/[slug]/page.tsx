@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LandingPageContent } from "@/components/landing/page-content";
 import { AnalyticsTracker } from "@/components/landing/analytics-tracker";
+import { VariantPersister } from "@/components/landing/variant-persister";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -55,9 +56,16 @@ export default async function LandingPage({ params, searchParams }: Props) {
     .eq("status", "running")
     .maybeSingle() as { data: AbTest | null };
 
-  // Cookie-stable variant assignment per visitor per test
+  // Cookie-stable variant assignment per visitor per test.
+  //
+  // In Next.js 15 server components, cookies() is read-only. To persist a
+  // variant assignment we'd normally do it in middleware or via a route
+  // handler. For now, we:
+  //   - Read an existing cookie if present
+  //   - Otherwise pick a variant deterministically (hash of a visitor
+  //     fingerprint) so the same visitor consistently gets the same
+  //     variant even without a cookie
   let assignedVariant: AbVariant | null = null;
-  let isNewAssignment = false;
 
   if (abTest?.ab_test_variants?.length) {
     const cookieStore = await cookies();
@@ -86,18 +94,6 @@ export default async function LandingPage({ params, searchParams }: Props) {
         }
       }
       assignedVariant = assignedVariant ?? variants[0];
-      isNewAssignment = true;
-    }
-
-    // Set cookie so this visitor always sees the same variant
-    if (assignedVariant && isNewAssignment) {
-      cookieStore.set(cookieKey, assignedVariant.id, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
     }
   }
 
@@ -124,6 +120,9 @@ export default async function LandingPage({ params, searchParams }: Props) {
         pageSlug={slug}
         variantId={assignedVariant?.id}
       />
+      {abTest && assignedVariant && (
+        <VariantPersister testId={abTest.id} variantId={assignedVariant.id} />
+      )}
       <LandingPageContent
         funnel={funnel}
         content={rawContent}
