@@ -232,20 +232,43 @@ export default function CampaignReviewPage() {
           {landingSlug && (
             <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5">
               <p className="text-xs uppercase tracking-wider text-emerald-300 mb-2">
-                Your live landing page
+                Your live landing page (A/B test running)
               </p>
               <code className="block text-sm text-emerald-200 mb-4 break-all">
                 {typeof window !== "undefined" ? window.location.origin : ""}/{landingSlug}
               </code>
-              <a
-                href={`/${landingSlug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors"
-              >
-                Open Live Funnel
-                <ExternalLink className="w-4 h-4" />
-              </a>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <a
+                  href={`/${landingSlug}?variant=long`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Preview Long-form
+                </a>
+                <a
+                  href={`/${landingSlug}?variant=short`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Preview Short-form
+                </a>
+                <a
+                  href={`/${landingSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Live URL (random)
+                </a>
+              </div>
+              <p className="text-xs text-emerald-400/70 mt-3">
+                Random URL assigns visitors 50/50 to each variant. Preview links let you force-view each one.
+              </p>
             </div>
           )}
 

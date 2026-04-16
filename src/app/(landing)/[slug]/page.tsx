@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { LandingPageContent } from "@/components/landing/page-content";
 import { AnalyticsTracker } from "@/components/landing/analytics-tracker";
 import { VariantPersister } from "@/components/landing/variant-persister";
+import { PreviewBanner } from "@/components/landing/preview-banner";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -56,30 +57,39 @@ export default async function LandingPage({ params, searchParams }: Props) {
     .eq("status", "running")
     .maybeSingle() as { data: AbTest | null };
 
-  // Cookie-stable variant assignment per visitor per test.
-  //
-  // In Next.js 15 server components, cookies() is read-only. To persist a
-  // variant assignment we'd normally do it in middleware or via a route
-  // handler. For now, we:
-  //   - Read an existing cookie if present
-  //   - Otherwise pick a variant deterministically (hash of a visitor
-  //     fingerprint) so the same visitor consistently gets the same
-  //     variant even without a cookie
+  // Variant assignment precedence:
+  //   1. ?variant=<id> or ?variant=long|short query param → preview override
+  //      (doesn't persist a cookie so admins can toggle freely)
+  //   2. Existing sophia_ab_<test_id> cookie → return visitor consistency
+  //   3. Random weighted assignment → new visitor
   let assignedVariant: AbVariant | null = null;
+  let isPreviewMode = false;
 
   if (abTest?.ab_test_variants?.length) {
-    const cookieStore = await cookies();
-    const cookieKey = `sophia_ab_${abTest.id}`;
-    const existing = cookieStore.get(cookieKey)?.value;
+    const variants = abTest.ab_test_variants;
+    const previewParam = search.variant;
 
-    if (existing) {
+    if (previewParam) {
+      // Match by id (exact) or by label (case-insensitive, "long"/"short")
       assignedVariant =
-        abTest.ab_test_variants.find((v) => v.id === existing) ?? null;
+        variants.find((v) => v.id === previewParam) ??
+        variants.find((v) => v.variant_label.toLowerCase().startsWith(previewParam.toLowerCase())) ??
+        null;
+      if (assignedVariant) isPreviewMode = true;
     }
 
     if (!assignedVariant) {
-      // Pick a variant weighted by traffic_percentage
-      const variants = abTest.ab_test_variants;
+      const cookieStore = await cookies();
+      const cookieKey = `sophia_ab_${abTest.id}`;
+      const existing = cookieStore.get(cookieKey)?.value;
+
+      if (existing) {
+        assignedVariant = variants.find((v) => v.id === existing) ?? null;
+      }
+    }
+
+    if (!assignedVariant) {
+      // Weighted random for new visitor
       const total = variants.reduce(
         (sum, v) => sum + (v.traffic_percentage ?? 0),
         0
@@ -120,8 +130,15 @@ export default async function LandingPage({ params, searchParams }: Props) {
         pageSlug={slug}
         variantId={assignedVariant?.id}
       />
-      {abTest && assignedVariant && (
+      {abTest && assignedVariant && !isPreviewMode && (
         <VariantPersister testId={abTest.id} variantId={assignedVariant.id} />
+      )}
+      {isPreviewMode && assignedVariant && abTest && (
+        <PreviewBanner
+          variantLabel={assignedVariant.variant_label}
+          otherVariants={abTest.ab_test_variants.filter((v) => v.id !== assignedVariant!.id)}
+          slug={slug}
+        />
       )}
       <LandingPageContent
         funnel={funnel}

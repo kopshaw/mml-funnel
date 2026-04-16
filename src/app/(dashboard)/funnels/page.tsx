@@ -127,21 +127,41 @@ export default async function FunnelsPage() {
                   </div>
                 </div>
 
-                {/* Action footer: View Live + slug */}
+                {/* Action footer: variant previews + live URL */}
                 {funnel.slug && funnel.status === "active" && (
-                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                    <code className="truncate text-xs text-muted-foreground">
+                  <div className="mt-4 space-y-2 border-t border-border pt-3">
+                    <code className="block truncate text-xs text-muted-foreground">
                       /{funnel.slug}
                     </code>
-                    <Link
-                      href={`/${funnel.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
-                    >
-                      View Live
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Link
+                        href={`/${funnel.slug}?variant=long`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        Long-form
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      <Link
+                        href={`/${funnel.slug}?variant=short`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-2 py-1 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                      >
+                        Short-form
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      <Link
+                        href={`/${funnel.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md bg-slate-500/10 px-2 py-1 text-xs font-medium text-slate-300 hover:bg-slate-500/20 transition-colors"
+                      >
+                        Live
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
