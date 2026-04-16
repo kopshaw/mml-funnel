@@ -218,6 +218,70 @@ export async function launchCampaign(briefId: string): Promise<string> {
       throw new Error(`Failed to create ad creatives: ${adsError.message}`);
     }
 
+    // ── 7a. Create A/B test for the landing page (long vs short variants) ──
+    const generatedV2 = content as unknown as {
+      landing_page_long?: unknown;
+      landing_page_short?: unknown;
+    };
+
+    if (generatedV2.landing_page_long && generatedV2.landing_page_short) {
+      // Find the page_view stage to attach the test to
+      const pageViewStage = createdStages.find(
+        (s) => (s.stage_type as string) === "page_view" || (s.stage_type as string) === "page_conversion"
+      );
+
+      if (pageViewStage) {
+        const { data: abTest, error: abTestError } = await supabase
+          .from("ab_tests")
+          .insert({
+            funnel_id: funnelId,
+            funnel_stage_id: pageViewStage.id as string,
+            test_name: `Landing Page: Long-form vs Short-form`,
+            test_type: "landing_page",
+            status: "running",
+            min_sample_per_variant: 100,
+            confidence_threshold: 0.95,
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (abTestError || !abTest) {
+          console.warn(
+            `[campaign-launcher] Failed to create A/B test (non-fatal):`,
+            abTestError?.message
+          );
+        } else {
+          // Insert both variants
+          const { error: variantsError } = await supabase
+            .from("ab_test_variants")
+            .insert([
+              {
+                ab_test_id: abTest.id as string,
+                variant_label: "Long-form",
+                variant_content: { variant: "long", page: generatedV2.landing_page_long },
+                is_control: true,
+                traffic_percentage: 50,
+              },
+              {
+                ab_test_id: abTest.id as string,
+                variant_label: "Short-form",
+                variant_content: { variant: "short", page: generatedV2.landing_page_short },
+                is_control: false,
+                traffic_percentage: 50,
+              },
+            ]);
+
+          if (variantsError) {
+            console.warn(
+              `[campaign-launcher] Failed to insert A/B variants (non-fatal):`,
+              variantsError.message
+            );
+          }
+        }
+      }
+    }
+
     // ── 7b. Create Meta ad campaign (non-blocking) ────────────────────────
     // Don't fail the launch if Meta campaign creation fails — the ads can
     // be created later manually or via retry.
