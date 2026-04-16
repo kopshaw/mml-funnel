@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   Plus,
@@ -8,22 +6,14 @@ import {
   Tag,
   ArrowRight,
   Megaphone,
+  Building2,
 } from "lucide-react";
+import { getCampaignBriefs, getCampaignBriefCounts } from "@/lib/queries/campaign-queries";
 
-type CampaignStatus = "draft" | "generating" | "review" | "launched";
-
-interface Campaign {
-  id: string;
-  name: string;
-  client: string;
-  status: CampaignStatus;
-  offerType: string;
-  offerPrice: number;
-  createdAt: string;
-}
+type CampaignStatus = "draft" | "generating" | "review" | "approved" | "launched" | "archived";
 
 const statusConfig: Record<
-  CampaignStatus,
+  string,
   { label: string; bg: string; text: string; dot: string }
 > = {
   draft: {
@@ -44,69 +34,39 @@ const statusConfig: Record<
     text: "text-blue-400",
     dot: "bg-blue-400",
   },
+  approved: {
+    label: "Approved",
+    bg: "bg-cyan-500/15",
+    text: "text-cyan-400",
+    dot: "bg-cyan-400",
+  },
   launched: {
     label: "Launched",
     bg: "bg-emerald-500/15",
     text: "text-emerald-400",
     dot: "bg-emerald-400",
   },
+  archived: {
+    label: "Archived",
+    bg: "bg-slate-700/50",
+    text: "text-slate-500",
+    dot: "bg-slate-500",
+  },
 };
 
-const mockCampaigns: Campaign[] = [
-  {
-    id: "camp-001",
-    name: "Q2 Agency Growth Funnel",
-    client: "Metric Mentor Labs",
-    status: "launched",
-    offerType: "High Ticket ($3k+)",
-    offerPrice: 4997,
-    createdAt: "2026-03-15",
-  },
-  {
-    id: "camp-002",
-    name: "SaaS Free Trial Acquisition",
-    client: "CloudSync Pro",
-    status: "review",
-    offerType: "Low Ticket (<$500)",
-    offerPrice: 49,
-    createdAt: "2026-03-28",
-  },
-  {
-    id: "camp-003",
-    name: "Coaching Program Launch",
-    client: "Mindset Mastery Co",
-    status: "generating",
-    offerType: "Mid Ticket ($500-$3k)",
-    offerPrice: 1497,
-    createdAt: "2026-04-02",
-  },
-  {
-    id: "camp-004",
-    name: "E-Commerce Summer Promo",
-    client: "Urban Essentials",
-    status: "draft",
-    offerType: "Low Ticket (<$500)",
-    offerPrice: 79,
-    createdAt: "2026-04-05",
-  },
-  {
-    id: "camp-005",
-    name: "Webinar Funnel Relaunch",
-    client: "Metric Mentor Labs",
-    status: "launched",
-    offerType: "High Ticket ($3k+)",
-    offerPrice: 7500,
-    createdAt: "2026-02-10",
-  },
-];
+const offerTypeLabels: Record<string, string> = {
+  low_ticket: "Low Ticket (<$500)",
+  mid_ticket: "Mid Ticket ($500-$3k)",
+  high_ticket: "High Ticket ($3k+)",
+};
 
-function formatPrice(price: number): string {
+function formatPrice(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(price);
+  }).format(cents / 100);
 }
 
 function formatDate(dateStr: string): string {
@@ -117,8 +77,8 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function StatusBadge({ status }: { status: CampaignStatus }) {
-  const config = statusConfig[status];
+function StatusBadge({ status }: { status: string }) {
+  const config = statusConfig[status] ?? statusConfig.draft;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${config.bg} ${config.text}`}
@@ -157,8 +117,11 @@ function EmptyState() {
   );
 }
 
-export default function CampaignsPage() {
-  const campaigns = mockCampaigns;
+export default async function CampaignsPage() {
+  const [campaigns, counts] = await Promise.all([
+    getCampaignBriefs(),
+    getCampaignBriefCounts(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -180,6 +143,28 @@ export default function CampaignsPage() {
         </Link>
       </div>
 
+      {/* Status summary */}
+      {counts.total > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Draft", value: counts.draft, color: "text-slate-400" },
+            { label: "Generating", value: counts.generating, color: "text-amber-400" },
+            { label: "Review", value: counts.review, color: "text-blue-400" },
+            { label: "Launched", value: counts.launched, color: "text-emerald-400" },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-lg border border-slate-800 bg-slate-900 px-4 py-3"
+            >
+              <p className="text-xs font-medium text-slate-500">{stat.label}</p>
+              <p className={`mt-1 text-2xl font-bold ${stat.color}`}>
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Campaign Grid */}
       {campaigns.length === 0 ? (
         <EmptyState />
@@ -188,7 +173,7 @@ export default function CampaignsPage() {
           {campaigns.map((campaign) => (
             <Link
               key={campaign.id}
-              href={`/campaigns/${campaign.id}`}
+              href={`/campaigns/${campaign.id}/review`}
               className="group rounded-xl border border-slate-800 bg-slate-900 p-5 transition-all hover:border-slate-700 hover:bg-slate-900/80"
             >
               {/* Top row: name + status */}
@@ -199,9 +184,9 @@ export default function CampaignsPage() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold text-slate-100 group-hover:text-white">
-                      {campaign.name}
+                      {campaign.offer_name}
                     </h3>
-                    <p className="text-xs text-slate-400">{campaign.client}</p>
+                    <p className="text-xs text-slate-400">{campaign.brand_name}</p>
                   </div>
                 </div>
                 <StatusBadge status={campaign.status} />
@@ -211,15 +196,23 @@ export default function CampaignsPage() {
               <div className="mt-4 space-y-2.5">
                 <div className="flex items-center gap-2 text-sm">
                   <Tag className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-slate-400">{campaign.offerType}</span>
+                  <span className="text-slate-400">
+                    {offerTypeLabels[campaign.offer_type] ?? campaign.offer_type}
+                  </span>
                   <span className="ml-auto font-medium text-slate-200">
-                    {formatPrice(campaign.offerPrice)}
+                    {formatPrice(campaign.offer_price_cents)}
                   </span>
                 </div>
+                {campaign.client?.name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="text-slate-400">{campaign.client.name}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-3.5 w-3.5 text-slate-500" />
                   <span className="text-slate-400">
-                    Created {formatDate(campaign.createdAt)}
+                    Created {formatDate(campaign.created_at)}
                   </span>
                 </div>
               </div>

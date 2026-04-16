@@ -9,8 +9,10 @@ import {
   ArrowDownRight,
   Inbox,
 } from "lucide-react";
-import { getOverviewKPIs, getRecentActivity } from "@/lib/queries/overview-queries";
+import { getOverviewKPIs, getRecentActivity, getRevenueTimeSeries, getPipelineDistribution } from "@/lib/queries/overview-queries";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { PipelineChart } from "@/components/dashboard/pipeline-chart";
 
 const activityTypeColors: Record<string, string> = {
   healing: "bg-violet-500",
@@ -22,8 +24,12 @@ const activityTypeColors: Record<string, string> = {
 };
 
 export default async function OverviewPage() {
-  const kpis = await getOverviewKPIs();
-  const recentActivity = await getRecentActivity(undefined, 10);
+  const [kpis, recentActivity, revenueData, pipelineData] = await Promise.all([
+    getOverviewKPIs(),
+    getRecentActivity(undefined, 10),
+    getRevenueTimeSeries(undefined, 30),
+    getPipelineDistribution(),
+  ]);
 
   const totalRevenueDollars = kpis.totalRevenue / 100;
   const adSpendDollars = kpis.adSpend / 100;
@@ -113,37 +119,25 @@ export default async function OverviewPage() {
         })}
       </div>
 
-      {/* Two-column section: chart placeholder + pipeline placeholder */}
+      {/* Two-column section: Revenue chart + Pipeline chart */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Revenue Trend Chart Placeholder */}
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
           <h3 className="text-base font-semibold text-slate-100">
             Revenue Trend
           </h3>
           <p className="mt-1 text-sm text-slate-400">Last 30 days</p>
-          <div className="mt-6 flex h-56 items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-800/30">
-            <div className="text-center">
-              <BarChart3 className="mx-auto h-8 w-8 text-slate-600" />
-              <p className="mt-2 text-sm text-slate-500">
-                Revenue chart coming soon
-              </p>
-            </div>
+          <div className="mt-4">
+            <RevenueChart data={revenueData} />
           </div>
         </div>
 
-        {/* Pipeline Distribution Placeholder */}
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
           <h3 className="text-base font-semibold text-slate-100">
             Pipeline Distribution
           </h3>
-          <p className="mt-1 text-sm text-slate-400">By funnel stage</p>
-          <div className="mt-6 flex h-56 items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-800/30">
-            <div className="text-center">
-              <Target className="mx-auto h-8 w-8 text-slate-600" />
-              <p className="mt-2 text-sm text-slate-500">
-                Pipeline chart coming soon
-              </p>
-            </div>
+          <p className="mt-1 text-sm text-slate-400">By qualification status</p>
+          <div className="mt-4">
+            <PipelineChart data={pipelineData} />
           </div>
         </div>
       </div>

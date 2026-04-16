@@ -255,11 +255,23 @@ async function executeSwapLandingPage(
 }
 
 async function executeChangeEmailTiming(details: Record<string, unknown>): Promise<void> {
-  // Update email send timing in the sequence configuration
-  // This is stored in our own DB, so we just update the config
   const supabase = createAdminClient();
-  // Implementation depends on how email sequences are stored
-  console.log("Email timing change:", details);
+
+  const stepId = details.step_id as string;
+  const newDelayHours = details.new_delay_hours as number;
+
+  if (!stepId || newDelayHours === undefined) {
+    throw new Error("Missing step_id or new_delay_hours for email timing change");
+  }
+
+  const { error } = await supabase
+    .from("email_sequence_steps")
+    .update({ delay_hours: newDelayHours })
+    .eq("id", stepId);
+
+  if (error) {
+    throw new Error(`Failed to update email timing: ${error.message}`);
+  }
 }
 
 async function executeTriggerSMS(
@@ -303,9 +315,85 @@ async function executeRevert(details: Record<string, unknown>): Promise<void> {
     throw new Error("No previous state to revert to");
   }
 
-  // Re-apply the previous state based on action type
-  // This effectively undoes the original change
-  console.log("Reverting action:", originalActionId, "to state:", originalAction.previous_state);
+  const prevState = originalAction.previous_state as Record<string, unknown>;
+  const origDetails = prevState.original_details as Record<string, unknown>;
+  const actionType = originalAction.action_type as string;
+
+  // Revert based on the original action type
+  switch (actionType) {
+    case "swap_email_subject":
+    case "swap_email_body": {
+      // Restore original email content in A/B test variant
+      if (origDetails.ab_test_id && origDetails.variant_id) {
+        await supabase
+          .from("ab_test_variants")
+          .delete()
+          .eq("ab_test_id", origDetails.ab_test_id as string)
+          .eq("is_control", false);
+      }
+      break;
+    }
+
+    case "adjust_ad_budget": {
+      // Restore original budget
+      const adSetId = origDetails.adset_id as string;
+      const originalBudget = origDetails.original_daily_budget_cents as number;
+      if (adSetId && originalBudget) {
+        await updateAdSetBudget(adSetId, originalBudget);
+      }
+      break;
+    }
+
+    case "change_cta": {
+      // Restore original CTA
+      if (origDetails.variant_id && origDetails.current_content) {
+        await supabase
+          .from("ab_test_variants")
+          .update({ variant_content: origDetails.current_content })
+          .eq("id", origDetails.variant_id as string);
+      }
+      break;
+    }
+
+    case "swap_landing_page": {
+      // Restore original traffic split
+      const testId = origDetails.ab_test_id as string;
+      const origVariantId = origDetails.original_variant_id as string;
+      if (testId && origVariantId) {
+        await supabase
+          .from("ab_test_variants")
+          .update({ traffic_percentage: 0 })
+          .eq("ab_test_id", testId);
+        await supabase
+          .from("ab_test_variants")
+          .update({ traffic_percentage: 100 })
+          .eq("id", origVariantId);
+      }
+      break;
+    }
+
+    case "change_email_timing": {
+      // Restore original delay
+      const stepId = origDetails.step_id as string;
+      const origDelay = origDetails.original_delay_hours as number;
+      if (stepId && origDelay !== undefined) {
+        await supabase
+          .from("email_sequence_steps")
+          .update({ delay_hours: origDelay })
+          .eq("id", stepId);
+      }
+      break;
+    }
+
+    default:
+      throw new Error(`Cannot revert action type: ${actionType}`);
+  }
+
+  // Mark the original action as reverted
+  await supabase
+    .from("optimization_actions")
+    .update({ status: "reverted" })
+    .eq("id", originalActionId);
 }
 
 async function capturePreviousState(

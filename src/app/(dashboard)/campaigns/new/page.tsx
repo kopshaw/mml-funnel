@@ -968,13 +968,41 @@ function StepReview({
   formData,
   generating,
   generated,
+  generateError,
+  briefId,
   onGenerate,
 }: {
   formData: FormData;
   generating: boolean;
   generated: boolean;
+  generateError: string | null;
+  briefId: string | null;
   onGenerate: () => void;
 }) {
+  if (generateError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+          <X className="h-10 w-10 text-red-400" />
+        </div>
+        <h3 className="mt-6 text-xl font-semibold text-slate-100">
+          Generation Failed
+        </h3>
+        <p className="mt-2 max-w-md text-center text-sm text-red-400">
+          {generateError}
+        </p>
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+        >
+          <Rocket className="h-4 w-4" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   if (generating) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -1014,7 +1042,7 @@ function StepReview({
           ad copy, and email sequences before launching.
         </p>
         <Link
-          href="/campaigns/camp-new/review"
+          href={`/campaigns/${briefId}/review`}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
         >
           <Sparkles className="h-4 w-4" />
@@ -1130,13 +1158,78 @@ export default function NewCampaignPage() {
     setFormData((prev) => ({ ...prev, ...updates }));
   }
 
-  function handleGenerate() {
+  const [briefId, setBriefId] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  async function handleGenerate() {
     setGenerating(true);
-    // Simulate AI generation
-    setTimeout(() => {
+    setGenerateError(null);
+
+    try {
+      // 1. Save the brief to Supabase
+      const offerTypeMap: Record<string, string> = {
+        "Low Ticket (<$500)": "low_ticket",
+        "Mid Ticket ($500-$3k)": "mid_ticket",
+        "High Ticket ($3k+)": "high_ticket",
+      };
+
+      const res = await fetch("/api/campaigns/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand_name: formData.brandName,
+          brand_voice: formData.brandVoice,
+          brand_colors: formData.brandColors ? { raw: formData.brandColors } : {},
+          brand_guidelines: formData.brandGuidelines,
+          website_url: formData.websiteUrl,
+          offer_name: formData.offerName,
+          offer_description: formData.offerDescription,
+          offer_type: offerTypeMap[formData.offerType] ?? "mid_ticket",
+          offer_price_cents: Math.round(Number(formData.price) * 100),
+          offer_usps: formData.usps,
+          offer_deliverables: formData.deliverables,
+          offer_guarantee: formData.guarantee,
+          target_audience: formData.targetAudience,
+          target_persona: formData.targetPersona,
+          pain_points: formData.painPoints,
+          desired_outcomes: formData.desiredOutcomes,
+          demographics: formData.demographics,
+          testimonials: formData.testimonials,
+          social_proof: formData.socialProof,
+          competitor_info: formData.competitorInfo,
+          traffic_source: formData.trafficSource.toLowerCase().replace(/ /g, "_") || "meta_ads",
+          daily_budget_cents: formData.dailyBudget ? Math.round(Number(formData.dailyBudget) * 100) : null,
+          campaign_goal: formData.campaignGoal,
+          booking_url: formData.bookingUrl,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to save brief" }));
+        throw new Error(err.error ?? "Failed to save brief");
+      }
+
+      const { id } = await res.json();
+      setBriefId(id);
+
+      // 2. Trigger AI generation
+      const genRes = await fetch("/api/campaigns/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ briefId: id }),
+      });
+
+      if (!genRes.ok) {
+        const err = await genRes.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(err.error ?? "AI generation failed");
+      }
+
       setGenerating(false);
       setGenerated(true);
-    }, 4000);
+    } catch (err) {
+      setGenerating(false);
+      setGenerateError(err instanceof Error ? err.message : "Something went wrong");
+    }
   }
 
   function goNext() {
@@ -1190,6 +1283,8 @@ export default function NewCampaignPage() {
             formData={formData}
             generating={generating}
             generated={generated}
+            generateError={generateError}
+            briefId={briefId}
             onGenerate={handleGenerate}
           />
         )}

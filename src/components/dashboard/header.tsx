@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, User, ChevronRight, LogOut } from "lucide-react";
+import { Bell, User, ChevronRight, LogOut, ChevronDown, Building2, Globe } from "lucide-react";
 import { useClient } from "@/lib/client-context";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,16 +18,29 @@ const pageTitles: Record<string, string> = {
   "/settings": "Settings",
   "/campaigns": "Campaigns",
   "/campaigns/new": "New Campaign",
+  "/roadmap": "Roadmap",
 };
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { clientSlug, clients } = useClient();
+  const { clientSlug, clients, setClient, isAdmin } = useClient();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const title = pageTitles[pathname] ?? "SOPHIA";
-
   const activeClient = clients.find((c) => c.slug === clientSlug);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -50,6 +64,58 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Client Switcher */}
+        {isAdmin && clients.length > 0 && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              {activeClient?.name ?? "All Clients"}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-1 w-56 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClient(null);
+                    setDropdownOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-700 ${
+                    !clientSlug ? "text-blue-400 font-medium" : "text-slate-300"
+                  }`}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  All Clients
+                </button>
+                <div className="my-1 border-t border-slate-700" />
+                {clients.map((client) => (
+                  <button
+                    key={client.id}
+                    type="button"
+                    onClick={() => {
+                      setClient(client.slug);
+                      setDropdownOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-700 ${
+                      clientSlug === client.slug
+                        ? "text-blue-400 font-medium"
+                        : "text-slate-300"
+                    }`}
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    {client.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Notification bell */}
         <button
           type="button"

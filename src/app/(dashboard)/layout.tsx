@@ -1,11 +1,30 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
-import { ClientProvider } from "@/lib/client-context";
+import { ClientProvider, type Client } from "@/lib/client-context";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-function DashboardShell({ children }: { children: React.ReactNode }) {
+async function getClients(): Promise<Client[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, slug, name")
+    .eq("status", "active")
+    .order("name");
+
+  if (error) {
+    console.error("Failed to load clients:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as Client[];
+}
+
+async function DashboardShell({ children }: { children: React.ReactNode }) {
+  const clients = await getClients();
+
   return (
-    <ClientProvider initialClients={[]} initialRole="admin">
+    <ClientProvider initialClients={clients} initialRole="admin">
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex flex-1 flex-col pl-64">
