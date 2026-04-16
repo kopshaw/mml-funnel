@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Layout, Mail, MessageSquare, Megaphone, Bot, Layers,
-  Edit3, Rocket, AlertCircle, Loader2, ChevronLeft,
+  Edit3, Rocket, AlertCircle, Loader2, ChevronLeft, ExternalLink,
 } from "lucide-react";
 
 interface LandingPage {
@@ -73,6 +73,7 @@ interface Brief {
   offer_name: string;
   generated_content: GeneratedContent | null;
   funnel_id: string | null;
+  landing_page_slug: string | null;
 }
 
 const reviewTabs = [
@@ -98,6 +99,7 @@ export default function CampaignReviewPage() {
   const [launched, setLaunched] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [funnelId, setFunnelId] = useState<string | null>(null);
+  const [landingSlug, setLandingSlug] = useState<string | null>(null);
 
   // Load the brief on mount
   useEffect(() => {
@@ -115,6 +117,7 @@ export default function CampaignReviewPage() {
           if (data.status === "launched" && data.funnel_id) {
             setLaunched(true);
             setFunnelId(data.funnel_id);
+            setLandingSlug(data.landing_page_slug ?? null);
           }
         }
       } catch (err) {
@@ -146,6 +149,7 @@ export default function CampaignReviewPage() {
       }
       const data = await res.json();
       setFunnelId(data.funnelId);
+      setLandingSlug(data.landingPageSlug ?? null);
       setLaunched(true);
     } catch (err) {
       setLaunchError(err instanceof Error ? err.message : "Launch failed");
@@ -214,7 +218,7 @@ export default function CampaignReviewPage() {
   if (launched) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-lg">
           <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Rocket className="w-8 h-8 text-green-400" />
           </div>
@@ -223,15 +227,34 @@ export default function CampaignReviewPage() {
             Your funnel is live. Landing page deployed, email sequences activated, AI agent configured.
             The self-healing engine will start monitoring performance immediately.
           </p>
-          <div className="flex gap-3 justify-center">
-            {funnelId && (
-              <button
-                onClick={() => router.push(`/funnels`)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
+
+          {landingSlug && (
+            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+              <p className="text-xs uppercase tracking-wider text-emerald-300 mb-2">
+                Your live landing page
+              </p>
+              <code className="block text-sm text-emerald-200 mb-4 break-all">
+                {typeof window !== "undefined" ? window.location.origin : ""}/{landingSlug}
+              </code>
+              <a
+                href={`/${landingSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors"
               >
-                View Funnel
-              </button>
-            )}
+                Open Live Funnel
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => router.push("/funnels")}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
+            >
+              View All Funnels
+            </button>
             <button
               onClick={() => router.push("/campaigns")}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg"

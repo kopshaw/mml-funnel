@@ -64,11 +64,19 @@ export async function POST(request: NextRequest) {
   try {
     const funnelId = await launchCampaign(briefId);
 
+    // Look up the slug for the new funnel so the client can show the live URL
+    const { data: funnel } = await supabase
+      .from("funnels")
+      .select("landing_page_slug")
+      .eq("id", funnelId)
+      .single();
+
     return NextResponse.json({
       briefId,
       funnelId,
       offerName: brief.offer_name,
       status: "launched",
+      landingPageSlug: funnel?.landing_page_slug ?? null,
     });
   } catch (err) {
     const message =

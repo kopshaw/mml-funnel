@@ -27,7 +27,7 @@ export async function GET(
   const { data, error } = await admin
     .from("campaign_briefs")
     .select(
-      "id, status, brand_name, offer_name, offer_type, generated_content, funnel_id, client_id, created_at, updated_at, generated_at"
+      "id, status, brand_name, offer_name, offer_type, generated_content, funnel_id, client_id, created_at, updated_at, generated_at, funnels(landing_page_slug, status)"
     )
     .eq("id", id)
     .single();
@@ -39,5 +39,12 @@ export async function GET(
     );
   }
 
-  return NextResponse.json(data);
+  // Flatten the joined funnel for the client
+  const row = data as Record<string, unknown> & { funnels?: { landing_page_slug?: string | null; status?: string } | null };
+  const funnel = row.funnels ?? null;
+  return NextResponse.json({
+    ...data,
+    funnel,
+    landing_page_slug: funnel?.landing_page_slug ?? null,
+  });
 }

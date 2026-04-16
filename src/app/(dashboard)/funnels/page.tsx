@@ -1,4 +1,5 @@
-import { Inbox } from "lucide-react";
+import Link from "next/link";
+import { Inbox, ExternalLink } from "lucide-react";
 import { getFunnels } from "@/lib/queries/funnel-queries";
 import { EmptyState } from "@/components/dashboard/empty-state";
 
@@ -125,6 +126,24 @@ export default async function FunnelsPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Action footer: View Live + slug */}
+                {funnel.slug && funnel.status === "active" && (
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+                    <code className="truncate text-xs text-muted-foreground">
+                      /{funnel.slug}
+                    </code>
+                    <Link
+                      href={`/${funnel.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+                    >
+                      View Live
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
               </div>
             );
           })}

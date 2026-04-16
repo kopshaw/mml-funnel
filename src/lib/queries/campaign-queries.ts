@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export interface CampaignBrief {
   id: string;
   client_id: string | null;
+  funnel_id: string | null;
   status: string;
   brand_name: string;
   offer_name: string;
@@ -18,6 +19,7 @@ export interface CampaignBrief {
   created_at: string;
   updated_at: string;
   client?: { name: string } | null;
+  funnel?: { landing_page_slug: string | null; status: string } | null;
 }
 
 export async function getCampaignBriefs(clientId?: string): Promise<CampaignBrief[]> {
@@ -25,7 +27,7 @@ export async function getCampaignBriefs(clientId?: string): Promise<CampaignBrie
 
   let query = supabase
     .from("campaign_briefs")
-    .select("id, client_id, status, brand_name, offer_name, offer_type, offer_price_cents, campaign_goal, traffic_source, daily_budget_cents, created_at, updated_at, clients(name)")
+    .select("id, client_id, funnel_id, status, brand_name, offer_name, offer_type, offer_price_cents, campaign_goal, traffic_source, daily_budget_cents, created_at, updated_at, clients(name), funnels(landing_page_slug, status)")
     .order("created_at", { ascending: false });
 
   if (clientId) {
@@ -42,6 +44,7 @@ export async function getCampaignBriefs(clientId?: string): Promise<CampaignBrie
   return (data ?? []).map((row: any) => ({
     ...row,
     client: row.clients ?? null,
+    funnel: row.funnels ?? null,
   }));
 }
 

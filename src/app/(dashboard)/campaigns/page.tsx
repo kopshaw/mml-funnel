@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Megaphone,
   Building2,
+  ExternalLink,
 } from "lucide-react";
 import { getCampaignBriefs, getCampaignBriefCounts } from "@/lib/queries/campaign-queries";
 
@@ -218,7 +219,21 @@ export default async function CampaignsPage() {
               </div>
 
               {/* Footer */}
-              <div className="mt-4 flex items-center justify-end border-t border-slate-800 pt-3">
+              <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
+                {campaign.status === "launched" && campaign.funnel?.landing_page_slug ? (
+                  <a
+                    href={`/${campaign.funnel.landing_page_slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                  >
+                    View Live Funnel
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <span />
+                )}
                 <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
                   View Campaign
                   <ArrowRight className="h-3 w-3" />
