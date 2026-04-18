@@ -13,6 +13,7 @@ import {
   Rocket,
   Settings,
   Users,
+  Wallet,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ const navItems = [
   { label: "Traffic & Ads", href: "/traffic", icon: BarChart3 },
   { label: "Pipeline", href: "/pipeline", icon: Users },
   { label: "Revenue", href: "/revenue", icon: DollarSign },
+  { label: "Finance & CFO", href: "/finance", icon: Wallet },
   { label: "Conversations", href: "/conversations", icon: MessageSquare },
   { label: "Funnels", href: "/funnels", icon: Activity },
   { label: "Optimization", href: "/healing", icon: Zap },

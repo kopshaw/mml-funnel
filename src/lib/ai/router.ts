@@ -237,29 +237,52 @@ function isProviderConfigured(provider: Provider): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Pick the best model for a task, given current provider availability and
- * any CFO-agent overrides stored in the database.
+ * Pick the best model for a task. Precedence:
+ *   1. Explicit override (e.g., caller knows exactly which model they want)
+ *   2. CFO-agent policy pin for (client_id, task) — force a specific model
+ *   3. CFO-agent demote for (client_id, task) — skip the primary model
+ *   4. TASK_POLICY[task] preferred list, filtered by configured providers
  */
-export async function selectModel(task: TaskType, override?: string): Promise<ModelSpec> {
+export async function selectModel(
+  task: TaskType,
+  override?: string,
+  clientId?: string
+): Promise<ModelSpec> {
   if (override && MODEL_CATALOG[override]) {
     const spec = MODEL_CATALOG[override];
     if (isProviderConfigured(spec.provider)) return spec;
-    // Override requested but provider not configured — fall through
   }
 
-  // Look up CFO-agent demotion for this task (if any)
-  const demoted = await getDemotedModel(task);
+  // CFO policy override (pin takes priority over demote)
+  if (clientId) {
+    const { pin, demote } = await getClientPolicy(clientId, task);
 
-  const candidates = TASK_POLICY[task];
-  for (const modelKey of candidates) {
-    if (demoted && modelKey === demoted) continue; // skip demoted
-    const spec = MODEL_CATALOG[modelKey];
-    if (spec && isProviderConfigured(spec.provider)) {
-      return spec;
+    if (pin && MODEL_CATALOG[pin]) {
+      const spec = MODEL_CATALOG[pin];
+      if (isProviderConfigured(spec.provider)) return spec;
+    }
+
+    // Walk the preferred list, skipping any demoted models
+    const candidates = TASK_POLICY[task];
+    for (const modelKey of candidates) {
+      if (demote && modelKey === demote) continue;
+      const spec = MODEL_CATALOG[modelKey];
+      if (spec && isProviderConfigured(spec.provider)) {
+        return spec;
+      }
+    }
+  } else {
+    // No client context — use default task policy
+    const candidates = TASK_POLICY[task];
+    for (const modelKey of candidates) {
+      const spec = MODEL_CATALOG[modelKey];
+      if (spec && isProviderConfigured(spec.provider)) {
+        return spec;
+      }
     }
   }
 
-  // Last resort: any configured model in the catalog
+  // Last resort: any configured model
   for (const spec of Object.values(MODEL_CATALOG)) {
     if (isProviderConfigured(spec.provider)) return spec;
   }
@@ -268,14 +291,47 @@ export async function selectModel(task: TaskType, override?: string): Promise<Mo
 }
 
 /**
- * The CFO agent can demote a model for a task (e.g., on cost spike).
- * Returns the demoted model key, if any, that should be skipped.
+ * Returns the CFO-pinned model (if any) and the CFO-demoted model (if any)
+ * for a given client + task. Looks at both task-specific and "all tasks"
+ * overrides; the task-specific wins.
  */
-async function getDemotedModel(task: TaskType): Promise<string | null> {
-  // For now, no DB-stored demotions — CFO agent will populate this in a
-  // future migration. Stub returns null.
-  void task;
-  return null;
+async function getClientPolicy(
+  clientId: string,
+  task: TaskType
+): Promise<{ pin: string | null; demote: string | null }> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("model_policy_overrides")
+      .select("task_type, model_key, kind")
+      .eq("client_id", clientId)
+      .eq("active", true)
+      .or(`task_type.eq.${task},task_type.is.null`);
+
+    if (!data || data.length === 0) return { pin: null, demote: null };
+
+    // Task-specific overrides beat wildcard
+    const sorted = [...data].sort((a, b) => {
+      if (a.task_type === task && b.task_type !== task) return -1;
+      if (b.task_type === task && a.task_type !== task) return 1;
+      return 0;
+    });
+
+    let pin: string | null = null;
+    let demote: string | null = null;
+
+    for (const o of sorted) {
+      if (o.kind === "pin" && !pin) pin = o.model_key;
+      if ((o.kind === "demote" || o.kind === "promote") && !demote && o.kind === "demote") {
+        demote = o.model_key;
+      }
+    }
+
+    return { pin, demote };
+  } catch (err) {
+    console.warn("[router] getClientPolicy failed:", err);
+    return { pin: null, demote: null };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -472,7 +528,7 @@ export async function routedChat(
   messages: ChatMessage[],
   options: ChatOptions = {}
 ): Promise<ChatResult> {
-  const spec = await selectModel(task, options.modelOverride);
+  const spec = await selectModel(task, options.modelOverride, options.clientId);
 
   async function callOnce(systemPromptOverride?: string): Promise<ChatResult> {
     const sysPrompt = systemPromptOverride ?? systemPrompt;
