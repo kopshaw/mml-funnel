@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import type { ReactElement } from "react";
+import { getCredentials } from "@/lib/integrations/credentials";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,23 +38,34 @@ export interface BulkEmailResult {
 }
 
 // ---------------------------------------------------------------------------
-// Client singleton
+// Per-tenant client resolution
+//
+// Every sender call now takes an optional clientId. If set we load that
+// tenant's Resend key + sender domain; otherwise fall back to MML's env.
 // ---------------------------------------------------------------------------
 
-const FROM_ADDRESS =
-  process.env.RESEND_FROM_ADDRESS ?? "MML Funnel <noreply@metricmentorlabs.com>";
+interface ResendContext {
+  client: Resend;
+  from: string;
+}
 
-let _resend: Resend | null = null;
-
-function getClient(): Resend {
-  if (!_resend) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("RESEND_API_KEY environment variable is not set");
-    }
-    _resend = new Resend(apiKey);
+async function getResendContext(clientId: string | null | undefined): Promise<ResendContext> {
+  const creds = await getCredentials(clientId ?? null, "resend");
+  if (!creds) {
+    throw new Error(
+      "Resend is not configured. Set RESEND_API_KEY (env) or connect Resend via Settings → Integrations."
+    );
   }
-  return _resend;
+  const apiKey = creds.credentials.api_key;
+  if (!apiKey) throw new Error("Resend credentials missing api_key");
+
+  return {
+    client: new Resend(apiKey),
+    from:
+      creds.credentials.from_address ||
+      (creds.metadata as { from_address?: string }).from_address ||
+      "MML Funnel <onboarding@resend.dev>",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -64,12 +76,12 @@ export async function sendEmail(
   to: string | string[],
   subject: string,
   react: ReactElement,
-  options: EmailOptions = {}
+  options: EmailOptions & { clientId?: string | null } = {}
 ): Promise<EmailResult> {
-  const resend = getClient();
+  const { client: resend, from } = await getResendContext(options.clientId);
 
   const { data, error } = await resend.emails.send({
-    from: FROM_ADDRESS,
+    from,
     to: Array.isArray(to) ? to : [to],
     subject,
     react,
@@ -96,12 +108,12 @@ export async function sendTextEmail(
   to: string,
   subject: string,
   text: string,
-  options: EmailOptions = {}
+  options: EmailOptions & { clientId?: string | null } = {}
 ): Promise<EmailResult> {
-  const resend = getClient();
+  const { client: resend, from } = await getResendContext(options.clientId);
 
   const { data, error } = await resend.emails.send({
-    from: FROM_ADDRESS,
+    from,
     to: [to],
     subject,
     text,
@@ -122,9 +134,10 @@ export async function sendTextEmail(
 // ---------------------------------------------------------------------------
 
 export async function sendBulk(
-  emails: EmailPayload[]
+  emails: EmailPayload[],
+  options: { clientId?: string | null } = {}
 ): Promise<BulkEmailResult> {
-  const resend = getClient();
+  const { client: resend, from } = await getResendContext(options.clientId);
 
   const results: EmailResult[] = [];
   const errors: Array<{ index: number; message: string }> = [];
@@ -136,7 +149,7 @@ export async function sendBulk(
     const batch = emails.slice(i, i + BATCH_SIZE);
 
     const payload = batch.map((email) => ({
-      from: FROM_ADDRESS,
+      from,
       to: Array.isArray(email.to) ? email.to : [email.to],
       subject: email.subject,
       react: email.react,

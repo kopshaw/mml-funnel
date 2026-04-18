@@ -200,7 +200,21 @@ export default function SettingsPage() {
       </p>
 
       {/* Quick links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <a
+          href="/settings/integrations"
+          className="rounded-xl border border-slate-800 hover:border-blue-500/40 bg-slate-900 p-4 transition-colors group"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">🔌</span>
+            <span className="text-sm font-semibold text-white group-hover:text-blue-400">
+              Integrations
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Connect your own Twilio, Meta, Stripe, Resend, OpenAI, etc.
+          </p>
+        </a>
         <a
           href="/settings/domains"
           className="rounded-xl border border-slate-800 hover:border-blue-500/40 bg-slate-900 p-4 transition-colors group"

@@ -12,6 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCredentials, type IntegrationType } from "@/lib/integrations/credentials";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -193,43 +194,47 @@ export const TASK_POLICY: Record<TaskType, string[]> = {
 // Client singletons
 // ---------------------------------------------------------------------------
 
-let _anthropic: Anthropic | null = null;
-let _openai: OpenAI | null = null;
-let _deepseek: OpenAI | null = null;
+/**
+ * Each chat call goes through the credential loader: tenant → env fallback.
+ * Clients are cheap to construct so we don't bother caching them (the
+ * credential loader has its own cache with TTL).
+ */
 
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-    _anthropic = new Anthropic({ apiKey });
+async function getAnthropicFor(clientId: string | null): Promise<Anthropic> {
+  const creds = await getCredentials(clientId, "anthropic");
+  if (!creds?.credentials.api_key) {
+    throw new Error("Anthropic not configured — set ANTHROPIC_API_KEY or connect via Settings");
   }
-  return _anthropic;
+  return new Anthropic({ apiKey: creds.credentials.api_key });
 }
 
-function getOpenAI(): OpenAI {
-  if (!_openai) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("OPENAI_API_KEY not set");
-    _openai = new OpenAI({ apiKey });
+async function getOpenAIFor(clientId: string | null): Promise<OpenAI> {
+  const creds = await getCredentials(clientId, "openai");
+  if (!creds?.credentials.api_key) {
+    throw new Error("OpenAI not configured — set OPENAI_API_KEY or connect via Settings");
   }
-  return _openai;
+  return new OpenAI({ apiKey: creds.credentials.api_key });
 }
 
-function getDeepSeek(): OpenAI {
-  if (!_deepseek) {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) throw new Error("DEEPSEEK_API_KEY not set");
-    _deepseek = new OpenAI({ apiKey, baseURL: "https://api.deepseek.com/v1" });
+async function getDeepSeekFor(clientId: string | null): Promise<OpenAI> {
+  const creds = await getCredentials(clientId, "deepseek");
+  if (!creds?.credentials.api_key) {
+    throw new Error("DeepSeek not configured — set DEEPSEEK_API_KEY or connect via Settings");
   }
-  return _deepseek;
+  return new OpenAI({ apiKey: creds.credentials.api_key, baseURL: "https://api.deepseek.com/v1" });
 }
 
-function isProviderConfigured(provider: Provider): boolean {
-  switch (provider) {
-    case "anthropic": return !!process.env.ANTHROPIC_API_KEY;
-    case "openai":    return !!process.env.OPENAI_API_KEY;
-    case "deepseek":  return !!process.env.DEEPSEEK_API_KEY;
-  }
+/**
+ * Is there SOME source of credentials (tenant or env) for this provider?
+ * Used during model selection to filter out unavailable providers.
+ */
+async function isProviderConfiguredFor(
+  provider: Provider,
+  clientId: string | null
+): Promise<boolean> {
+  const type: IntegrationType = provider;
+  const creds = await getCredentials(clientId, type);
+  return !!creds?.credentials.api_key;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,9 +253,11 @@ export async function selectModel(
   override?: string,
   clientId?: string
 ): Promise<ModelSpec> {
+  const cid = clientId ?? null;
+
   if (override && MODEL_CATALOG[override]) {
     const spec = MODEL_CATALOG[override];
-    if (isProviderConfigured(spec.provider)) return spec;
+    if (await isProviderConfiguredFor(spec.provider, cid)) return spec;
   }
 
   // CFO policy override (pin takes priority over demote)
@@ -259,24 +266,22 @@ export async function selectModel(
 
     if (pin && MODEL_CATALOG[pin]) {
       const spec = MODEL_CATALOG[pin];
-      if (isProviderConfigured(spec.provider)) return spec;
+      if (await isProviderConfiguredFor(spec.provider, cid)) return spec;
     }
 
-    // Walk the preferred list, skipping any demoted models
     const candidates = TASK_POLICY[task];
     for (const modelKey of candidates) {
       if (demote && modelKey === demote) continue;
       const spec = MODEL_CATALOG[modelKey];
-      if (spec && isProviderConfigured(spec.provider)) {
+      if (spec && (await isProviderConfiguredFor(spec.provider, cid))) {
         return spec;
       }
     }
   } else {
-    // No client context — use default task policy
     const candidates = TASK_POLICY[task];
     for (const modelKey of candidates) {
       const spec = MODEL_CATALOG[modelKey];
-      if (spec && isProviderConfigured(spec.provider)) {
+      if (spec && (await isProviderConfiguredFor(spec.provider, cid))) {
         return spec;
       }
     }
@@ -284,10 +289,10 @@ export async function selectModel(
 
   // Last resort: any configured model
   for (const spec of Object.values(MODEL_CATALOG)) {
-    if (isProviderConfigured(spec.provider)) return spec;
+    if (await isProviderConfiguredFor(spec.provider, cid)) return spec;
   }
 
-  throw new Error("No AI provider is configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or DEEPSEEK_API_KEY.");
+  throw new Error("No AI provider configured. Set ANTHROPIC_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY or connect one in Settings → Integrations.");
 }
 
 /**
@@ -391,7 +396,7 @@ async function chatAnthropic(
   messages: ChatMessage[],
   options: ChatOptions
 ): Promise<ChatResult> {
-  const client = getAnthropic();
+  const client = await getAnthropicFor(options.clientId ?? null);
 
   let finalSystem = systemPrompt;
   if (options.json) {
@@ -532,13 +537,14 @@ export async function routedChat(
 
   async function callOnce(systemPromptOverride?: string): Promise<ChatResult> {
     const sysPrompt = systemPromptOverride ?? systemPrompt;
+    const cid = options.clientId ?? null;
     switch (spec.provider) {
       case "anthropic":
         return chatAnthropic(spec, sysPrompt, messages, options);
       case "openai":
-        return chatOpenAI(spec, sysPrompt, messages, options, getOpenAI());
+        return chatOpenAI(spec, sysPrompt, messages, options, await getOpenAIFor(cid));
       case "deepseek":
-        return chatOpenAI(spec, sysPrompt, messages, options, getDeepSeek());
+        return chatOpenAI(spec, sysPrompt, messages, options, await getDeepSeekFor(cid));
     }
   }
 
