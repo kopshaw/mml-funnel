@@ -6,7 +6,7 @@ import { AnalyticsTracker } from "@/components/landing/analytics-tracker";
 import { VariantPersister } from "@/components/landing/variant-persister";
 import { PreviewBanner } from "@/components/landing/preview-banner";
 import { LongFormLayout } from "@/components/landing/long-form-layout";
-import { resolveWorkspaceFromHost } from "@/lib/workspace-resolver";
+import { resolveHost } from "@/lib/workspace-resolver";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -32,10 +32,15 @@ export default async function LandingPage({ params, searchParams }: Props) {
   const search = await searchParams;
   const supabase = createAdminClient();
 
-  // Resolve workspace from Host header (subdomain or custom domain).
-  // Null = main marketing site (backward-compat: serve any active funnel).
+  // Resolve host → main_site / workspace / not_found
   const headerList = await headers();
-  const workspace = await resolveWorkspaceFromHost(headerList.get("host"));
+  const hostResolution = await resolveHost(headerList.get("host"));
+
+  // Unknown subdomain/custom domain → hard 404
+  if (hostResolution.kind === "not_found") notFound();
+
+  const workspace =
+    hostResolution.kind === "workspace" ? hostResolution.workspace : null;
 
   // Find the funnel by landing page slug, scoped to the workspace if any.
   let query = supabase

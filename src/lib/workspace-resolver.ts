@@ -25,6 +25,17 @@ export interface ResolvedWorkspace {
   match_type: "subdomain" | "custom_domain" | "main_site";
 }
 
+/**
+ * Host resolution outcome:
+ *   - main_site: serve the marketing/default app (no client scoping)
+ *   - workspace: scope funnel queries to this client
+ *   - not_found: host doesn't match any known workspace — should 404
+ */
+export type HostResolution =
+  | { kind: "main_site" }
+  | { kind: "workspace"; workspace: ResolvedWorkspace }
+  | { kind: "not_found"; host: string };
+
 const MAIN_SITE_HOSTS = new Set([
   "sophiafunnels.com",
   "www.sophiafunnels.com",
@@ -44,24 +55,21 @@ export function normalizeHost(host: string | null | undefined): string {
 }
 
 /**
- * Given a Host header, resolve to the workspace.
- *
- * Returns null if this is the main marketing site.
+ * Given a Host header, resolve to main_site / workspace / not_found.
  */
-export async function resolveWorkspaceFromHost(
+export async function resolveHost(
   rawHost: string | null | undefined
-): Promise<ResolvedWorkspace | null> {
+): Promise<HostResolution> {
   const host = normalizeHost(rawHost);
-  if (!host) return null;
+  if (!host) return { kind: "main_site" };
 
-  // Main site / local dev — no workspace scoping, backward compatible
-  if (MAIN_SITE_HOSTS.has(host)) return null;
+  // Main site / local dev
+  if (MAIN_SITE_HOSTS.has(host)) return { kind: "main_site" };
 
   // Subdomain of sophiafunnels.com
   if (host.endsWith(`.${ROOT_DOMAIN}`)) {
     const sub = host.slice(0, -1 * (ROOT_DOMAIN.length + 1));
-    // Reject nested subdomains (e.g. "foo.bar.sophiafunnels.com")
-    if (sub.includes(".")) return null;
+    if (sub.includes(".")) return { kind: "not_found", host };
 
     const supabase = createAdminClient();
     const { data } = await supabase
@@ -71,15 +79,18 @@ export async function resolveWorkspaceFromHost(
       .eq("status", "active")
       .maybeSingle();
 
-    if (!data) return null;
+    if (!data) return { kind: "not_found", host };
     return {
-      client_id: data.id as string,
-      name: data.name as string,
-      slug: data.slug as string,
-      tier: data.tier as string,
-      subdomain: data.subdomain as string,
-      custom_domain: data.custom_domain as string | null,
-      match_type: "subdomain",
+      kind: "workspace",
+      workspace: {
+        client_id: data.id as string,
+        name: data.name as string,
+        slug: data.slug as string,
+        tier: data.tier as string,
+        subdomain: data.subdomain as string,
+        custom_domain: data.custom_domain as string | null,
+        match_type: "subdomain",
+      },
     };
   }
 
@@ -87,22 +98,39 @@ export async function resolveWorkspaceFromHost(
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("clients")
-    .select("id, name, slug, tier, subdomain, custom_domain, status, custom_domain_status")
+    .select(
+      "id, name, slug, tier, subdomain, custom_domain, status, custom_domain_status"
+    )
     .eq("custom_domain", host)
     .eq("custom_domain_status", "verified")
     .eq("status", "active")
     .maybeSingle();
 
-  if (!data) return null;
+  if (!data) return { kind: "not_found", host };
   return {
-    client_id: data.id as string,
-    name: data.name as string,
-    slug: data.slug as string,
-    tier: data.tier as string,
-    subdomain: data.subdomain as string | null,
-    custom_domain: data.custom_domain as string,
-    match_type: "custom_domain",
+    kind: "workspace",
+    workspace: {
+      client_id: data.id as string,
+      name: data.name as string,
+      slug: data.slug as string,
+      tier: data.tier as string,
+      subdomain: data.subdomain as string | null,
+      custom_domain: data.custom_domain as string,
+      match_type: "custom_domain",
+    },
   };
+}
+
+/**
+ * Legacy convenience wrapper used by [slug] — returns the workspace or
+ * null (null covers both "main site" and "not found" cases; callers that
+ * need the distinction should use resolveHost directly).
+ */
+export async function resolveWorkspaceFromHost(
+  rawHost: string | null | undefined
+): Promise<ResolvedWorkspace | null> {
+  const r = await resolveHost(rawHost);
+  return r.kind === "workspace" ? r.workspace : null;
 }
 
 /**
