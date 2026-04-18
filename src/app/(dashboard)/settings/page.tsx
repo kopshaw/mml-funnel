@@ -199,6 +199,52 @@ export default function SettingsPage() {
         Manage clients, configure funnels, and control integrations.
       </p>
 
+      {/* Quick links */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <a
+          href="/settings/domains"
+          className="rounded-xl border border-slate-800 hover:border-blue-500/40 bg-slate-900 p-4 transition-colors group"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">🌐</span>
+            <span className="text-sm font-semibold text-white group-hover:text-blue-400">
+              Domains
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Manage subdomain + connect your own custom domain
+          </p>
+        </a>
+        <a
+          href="/finance"
+          className="rounded-xl border border-slate-800 hover:border-emerald-500/40 bg-slate-900 p-4 transition-colors group"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">💰</span>
+            <span className="text-sm font-semibold text-white group-hover:text-emerald-400">
+              Finance &amp; CFO
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Cost, revenue, margin &amp; auto model-switching
+          </p>
+        </a>
+        <a
+          href="/healing"
+          className="rounded-xl border border-slate-800 hover:border-violet-500/40 bg-slate-900 p-4 transition-colors group"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">⚡</span>
+            <span className="text-sm font-semibold text-white group-hover:text-violet-400">
+              Optimization
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">
+            SOPHIA&apos;s self-healing action queue
+          </p>
+        </a>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-800">
         {tabs.map((tab) => {

@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LandingPageContent } from "@/components/landing/page-content";
 import { AnalyticsTracker } from "@/components/landing/analytics-tracker";
 import { VariantPersister } from "@/components/landing/variant-persister";
 import { PreviewBanner } from "@/components/landing/preview-banner";
 import { LongFormLayout } from "@/components/landing/long-form-layout";
+import { resolveWorkspaceFromHost } from "@/lib/workspace-resolver";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -31,13 +32,23 @@ export default async function LandingPage({ params, searchParams }: Props) {
   const search = await searchParams;
   const supabase = createAdminClient();
 
-  // Find the funnel by landing page slug
-  const { data: funnel } = await supabase
+  // Resolve workspace from Host header (subdomain or custom domain).
+  // Null = main marketing site (backward-compat: serve any active funnel).
+  const headerList = await headers();
+  const workspace = await resolveWorkspaceFromHost(headerList.get("host"));
+
+  // Find the funnel by landing page slug, scoped to the workspace if any.
+  let query = supabase
     .from("funnels")
     .select("*")
     .eq("landing_page_slug", slug)
-    .eq("status", "active")
-    .single() as {
+    .eq("status", "active");
+
+  if (workspace) {
+    query = query.eq("client_id", workspace.client_id);
+  }
+
+  const { data: funnel } = (await query.maybeSingle()) as {
     data: {
       id: string;
       name: string;
