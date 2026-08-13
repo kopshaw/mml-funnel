@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processAllQueues } from "@/lib/automation/sequence-runner";
+import { requireCronSecret } from "@/lib/cron-auth";
 
 /**
  * POST /api/automation/run
  *
  * Trigger processing of all automation queues (email + SMS).
  * Designed to be called by a cron job every 5 minutes.
- *
- * Accepts an optional `x-cron-secret` header for authentication
- * when called from external cron services (Vercel Cron, etc.).
  */
 export async function POST(request: NextRequest) {
-  // Optional: verify cron secret to prevent unauthorized triggers
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const provided = request.headers.get("x-cron-secret");
-    if (provided !== cronSecret) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-  }
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
 
   try {
     const results = await processAllQueues();

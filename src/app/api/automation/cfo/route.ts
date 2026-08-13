@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runCfoAnalysis } from "@/lib/cfo/analyzer";
+import { requireCronSecret } from "@/lib/cron-auth";
 
 /**
  * POST /api/automation/cfo
  *
  * Runs the CFO agent across all active clients.
  * Called by cron once daily (e.g., 6am UTC).
- *
- * Cron secret required to prevent external triggering.
  */
 export async function POST(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const provided = request.headers.get("x-cron-secret");
-    if (provided !== cronSecret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
 
   try {
     const result = await runCfoAnalysis();

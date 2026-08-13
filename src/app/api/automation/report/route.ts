@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chat } from "@/lib/ai/client";
 import { sendTextEmail } from "@/lib/integrations/resend";
+import { requireCronSecret } from "@/lib/cron-auth";
 
 /**
  * Generate and send daily funnel performance report.
  * Called by cron daily at 7:00 AM.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
+
   const supabase = createAdminClient();
 
   try {

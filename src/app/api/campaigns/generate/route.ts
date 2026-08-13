@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateCampaignContent } from "@/lib/ai/campaign-architect";
+import { requireUser } from "@/lib/require-user";
 
 /**
  * POST /api/campaigns/generate
@@ -11,6 +12,9 @@ import { generateCampaignContent } from "@/lib/ai/campaign-architect";
  * Returns the generated content for review before launch.
  */
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   let body: { briefId?: string };
   try {
     body = await request.json();

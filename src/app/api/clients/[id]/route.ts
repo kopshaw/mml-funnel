@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   const { id } = await params;
   const supabase = createAdminClient();
 
@@ -16,6 +20,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   const { id } = await params;
   const body = await request.json();
   const supabase = createAdminClient();

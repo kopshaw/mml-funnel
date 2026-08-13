@@ -5,18 +5,21 @@
 
 ## Production deployment
 
-- **Droplet**: `147.182.143.160` (new — old `162.243.221.126` is OFF)
+- **Droplet**: `147.182.143.160` (new — old `162.243.221.126` is OFF). SSH via `mml@ssh.metricmentorlabs.com`.
 - **App path on droplet**: `/opt/mml-funnel`
 - **Service**: `mml-funnel.service` (systemd, runs as `mml-funnel` user)
-- **Port**: 3000 (localhost)
-- **Public hostnames**: `sophiafunnels.metricmentorlabs.com` via Cloudflare Tunnel — NOT direct IP
-- **Deployed Next.js version**: 15.3.9 (minimum — CVE-2025-29927 patched)
+- **Port**: `3002` (localhost) — hardcoded in the systemd unit's exec wrapper
+- **Public hostnames**:
+  - `sophiafunnels.com` + `www.sophiafunnels.com` — root product host, served via nginx on droplet (see `~/Desktop/mml-droplet-migration/03-nginx-ssl.sh`)
+  - `sophiafunnels.metricmentorlabs.com` — staging-style access via Cloudflare Tunnel (UUID `fca31a9e-3586-4346-8228-a6b91e320a8c`). NOT in `MAIN_SITE_HOSTS` — landing pages on this host currently 404; dashboard works.
+  - `selfhealingfunnel.metricmentorlabs.com` — alias
+- **Deployed Next.js version**: 15.5.15 (CVE-2025-29927 patched)
 - **Repo**: `github.com/kopshaw/mml-funnel`
 
 ## Supabase
 
-- Shared with Command Center: `cummfyfxeedkdpjfcgxw.supabase.co` (ref `cummfyfxeedkdpjfcgxw`)
-- Reads standard `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` (no override wrapper needed)
+- **Dedicated project**, NOT the shared Command Center one. Doppler exposes it as `SOPHIA_SUPABASE_URL` / `SOPHIA_SUPABASE_ANON_KEY` / `SOPHIA_SUPABASE_SERVICE_ROLE_KEY`; the systemd wrapper aliases those into the standard `NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_SERVICE_ROLE_KEY` names at exec time.
+- App code reads the standard names — nothing tenant-specific in `src/`.
 
 ## Secrets
 
@@ -28,12 +31,12 @@
 ## Deployment procedure
 
 ```bash
-ssh mml@147.182.143.160    # or ssh ssh.metricmentorlabs.com once port 22 closes
+ssh mml@ssh.metricmentorlabs.com
 cd /opt/mml-funnel
 sudo -u mml-funnel bash -c "git pull && npm ci && npm run build"
 sudo systemctl restart mml-funnel
 sudo journalctl -u mml-funnel --since "1 min ago" -n 30
-curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
+curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3002/
 ```
 
 ## Critical rules

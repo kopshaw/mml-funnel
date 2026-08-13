@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 
 export async function GET() {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   const supabase = createAdminClient();
 
   // Fetch all client_users with their client info
@@ -98,6 +102,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   const body = await request.json();
   const { email, full_name, role, client_id, password } = body;
 

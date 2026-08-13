@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifySvixSignature } from "@/lib/svix-verify";
 
 /**
  * Handle email events from Resend (delivery, opens, clicks, bounces).
  * Resend sends webhooks for email lifecycle events.
  */
 export async function POST(request: NextRequest) {
-  const webhookSecret = process.env.WEBHOOK_SECRET;
+  const secret = process.env.RESEND_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
+  }
 
-  // Verify webhook (Resend uses svix for webhook signing)
   const svixId = request.headers.get("svix-id");
   const svixTimestamp = request.headers.get("svix-timestamp");
   const svixSignature = request.headers.get("svix-signature");
@@ -17,7 +20,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing webhook headers" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const rawBody = await request.text();
+  const valid = verifySvixSignature({
+    id: svixId,
+    timestamp: svixTimestamp,
+    signatureHeader: svixSignature,
+    body: rawBody,
+    secret,
+  });
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  const body = JSON.parse(rawBody);
   const { type, data } = body;
 
   const supabase = createAdminClient();

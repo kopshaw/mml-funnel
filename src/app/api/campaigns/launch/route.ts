@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { launchCampaign } from "@/lib/ai/campaign-launcher";
+import { requireUser } from "@/lib/require-user";
 
 /**
  * POST /api/campaigns/launch
@@ -11,6 +12,9 @@ import { launchCampaign } from "@/lib/ai/campaign-launcher";
  * Returns the newly created funnel ID.
  */
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
+
   let body: { briefId?: string };
   try {
     body = await request.json();

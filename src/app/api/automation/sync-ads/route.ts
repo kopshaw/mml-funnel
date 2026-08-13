@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCampaignInsights } from "@/lib/integrations/meta-ads";
+import { requireCronSecret } from "@/lib/cron-auth";
 
 /**
  * Sync Meta Ads metrics for all active funnels.
  * Called by cron every 30 minutes.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
+
   const supabase = createAdminClient();
 
   try {
